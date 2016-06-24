@@ -75,7 +75,7 @@ import retrofit2.Retrofit;
  *
  * @author Sam Claus, Tera Insights, LLC
  * @version 6/22/16
- * @// TODO: 6/24/16 add userID checks to prevent wasteful registration 
+ * @// TODO: 6/24/16 add userID checks to prevent wasteful registrations
  */
 public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         MenuItem.OnMenuItemClickListener, ScanAsyncTask.QRScanHandler,
