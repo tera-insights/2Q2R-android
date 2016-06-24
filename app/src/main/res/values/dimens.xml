@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="margin_vertical">20dp</dimen>
+    <dimen name="margin_horizontal">16dp</dimen>
+    <dimen name="scan_instructions">12sp</dimen>
+    <dimen name="scan_description">12sp</dimen>
+</resources>
