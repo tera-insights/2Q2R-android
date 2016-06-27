@@ -401,7 +401,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                 try {
 
                     bytes.write(pref);
-                    bytes.write(keyX, keyX.length - 32, 32); // TODO: investigate random errors
+                    bytes.write(keyX, keyX.length - 32, 32);
                     bytes.write(keyY, keyY.length - 32, 32);
                     System.out.println("Successfully parsed the public key.");
 
@@ -412,9 +412,19 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 //////////////////////////////////////////////////////////////
 
+                JSONObject clientData = new JSONObject();
+
+                try {
+
+                    clientData.put("typ", "navigator.id.finishEnrollment");
+                    clientData.put("challenge", challengeB64);
+                    clientData.put("origin", info.getString("baseURL"));
+
+                } catch (JSONException e) {}
+
                 byte[] futureUse = {0x00};
                 byte[] appParam  = Base64.decode(info.getString("appID"), Base64.DEFAULT);
-                byte[] challenge = Base64.decode(challengeB64, Base64.URL_SAFE);
+                byte[] challenge = Base64.decode(clientData.toString(), Base64.URL_SAFE);
                 byte[] keyHandle = Base64.decode(keyID, Base64.DEFAULT);
                 byte[] publicKey = bytes.toByteArray();
 
@@ -432,6 +442,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                     displayInPhoneDialog(e.toString());
                 }
 
+                System.out.println(Base64.encodeToString(bytes.toByteArray(), Base64.URL_SAFE));
                 byte[] signature = Utils.sign(bytes.toByteArray(), keyID);
 
                 //////////////////////////////////////////////////////////////
@@ -463,7 +474,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 try {
 
-                    registrationData.put("challenge", challengeB64);
+                    registrationData.put("clientData", clientData.toString());
                     registrationData.put("registrationData", Base64.encodeToString(
                             regRes, Base64.DEFAULT));
 
@@ -646,23 +657,17 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         @Override
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
-            if (response.code() == 200) {
+            String body = null;
 
-                String body = null;
-
-                try {
-                    body = response.body().string();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                displayInPhoneDialog(body);
-
-            } else {
-
-                displayInPhoneDialog(response.code() + "\n" + "Something went wrong with the registration response.");
-
+            try {
+                body = response.body().string();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
+                e.printStackTrace();
             }
+
+            displayInPhoneDialog(body);
 
         }
 
