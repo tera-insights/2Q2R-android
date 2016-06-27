@@ -129,31 +129,48 @@ public class KeyManager {
      * @param base64AppID The application ID [Base64 of 32 bytes] of
      *                    the server sending the request. Used to
      *                    lookup the server's information.
-     * @return A JSON object containing the `infoURL` [String] and
-     *          `counter` [int], for authentication, or null if
-     *          the server info wasn't found or an exception occurred.
+     * @return The infoURL for the given server, or null if the device
+     *          doesn't have any records of that server.
      */
-    public JSONObject getAuthenticationInfo(String base64AppID) {
+    public String getServerInfoURL(String base64AppID) {
 
         try {
 
-            if (serverRegs.has(base64AppID)) {
+            return serverRegs.getString(base64AppID);
 
-                JSONObject obj = serverRegs.getJSONObject(base64AppID);
-                int counter = obj.getInt("counter");
-                obj.put("counter", counter + 1);
+        } catch (JSONException e) {
 
-                String infoURL = obj.getString("infoURL");
+            return null;
 
-                return new JSONObject()
-                        .put("infoURL", infoURL)
-                        .put("counter", counter);
+        }
 
-            }
+    }
 
-        } catch (JSONException e) {}
+    /**
+     * Retrieves the counter corresponding to a particular key on the
+     * device. Used to protect against middleman attacks.
+     * @param base64KeyID [Base64 of 16 bytes] the key handle used
+     *                    to index the private key in the Android
+     *                    KeyStore, and to retrieve the counter
+     *                    for the key.
+     * @return A 4-byte integer describing the number of times the
+     *          key has been used for authentication, or -1 if their
+     *          was an error searching the JSON using the key handle.
+     */
+    public int getCounter(String base64KeyID) {
 
-        return null;
+        try {
+
+            int counter = serverRegs.getJSONObject("keyInfo").getJSONObject(base64KeyID)
+                    .getInt("counter");
+            serverRegs.getJSONObject("keyInfo").getJSONObject(base64KeyID).put("counter",
+                    counter + 1);
+
+            return counter;
+
+        } catch (JSONException e) {
+            return -1;
+        }
 
     }
 

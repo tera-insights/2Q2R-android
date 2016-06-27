@@ -33,6 +33,7 @@
     <string name="error_no_camera">No camera found.</string>
     <string name="error_attaching_camera">Failed to open camera preview.</string>
     <string name="error_no_perms">Camera access denied!</string>
+    <string name="camera_required">You must allow camera access to scan QR codes.</string>
 
     <string-array name="algorithms">
         <item>MD5</item>

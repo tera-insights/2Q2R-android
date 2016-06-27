@@ -33,6 +33,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -40,6 +41,10 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.TextView;
+
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
+import com.karumi.dexter.listener.single.PermissionListener;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.json.JSONException;
@@ -50,6 +55,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
@@ -115,6 +121,16 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Dexter.initialize(getApplicationContext());
+        PermissionListener listener = DialogOnDeniedPermissionListener.Builder
+                .withContext(getApplicationContext())
+                .withTitle("Camera Permission")
+                .withMessage(R.string.camera_required)
+                .withButtonText(android.R.string.ok)
+                .build();
+        Dexter.checkPermission(listener, Manifest.permission.CAMERA);
+
         setContentView(R.layout.scan);
         serverRegistrations = new File(getFilesDir(), "registrations.txt");
 
@@ -171,10 +187,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     @TargetApi(14)
     public void surfaceCreated(SurfaceHolder holder) {
         surfaceDestroyed(holder);
-
-        // Android 6 and greater must explicitly ask for camera permission.
-        if (Build.VERSION.SDK_INT >= 23)
-            requestPermissions();
 
         try {
 
@@ -241,41 +253,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     }
 
     /**
-     * Beginning in Android 6, it is mandatory that applications ask the user
-     * for camera permission at runtime.
-     */
-    @TargetApi(23)
-    private void requestPermissions() {
-
-        if (PackageManager.PERMISSION_GRANTED != checkSelfPermission(Manifest.permission.CAMERA)) {
-
-            if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-
-                // Opens a dialog explaining that the app needs access to the camera.
-
-            } else {
-
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, 0);
-
-            }
-
-        }
-
-    }
-
-    /**
-     * Called once the user has responded to the permissions request dialog for camera
-     * use. Not actually used, because permission issues are already handled in the
-     * try-catch when camera access is attempted.
-     * @param requestCode The code given when requesting permissions as an index.
-     * @param permissions Permissions that were requested.
-     * @param results The response to each of the respective requests.
-     */
-    @Override
-    @TargetApi(23)
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {}
-
-    /**
      * Convenience method for displaying an error message on an inactive
      * camera screen.
      * @param error The message to be displayed.
@@ -328,6 +305,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
             Bundle regData = new Bundle();
             regData.putString("challenge", challenge);
             regData.putString("infoURL", infoURL);
+            regData.putString("type", "R");
             getIntent().putExtras(regData);
 
             U2FServices.ServerInfo info = retro.create(U2FServices.ServerInfo.class);
@@ -341,7 +319,22 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
             String challenge   = splitQR[2];
             String keyID       = splitQR[3];
 
-            authenticate(base64AppID, challenge, keyID);
+            KeyManager keyManager = new KeyManager(serverRegistrations, firstRegistration);
+            String infoURL = keyManager.getServerInfoURL(base64AppID);
+
+            Retrofit retro = new Retrofit.Builder()
+                    .baseUrl(infoURL)
+                    .build();
+
+            Bundle authData = new Bundle();
+            authData.putString("challenge", challenge);
+            authData.putString("keyID", keyID);
+            authData.putString("type", "A");
+            getIntent().putExtras(authData);
+
+            U2FServices.ServerInfo info = retro.create(U2FServices.ServerInfo.class);
+            Call<ResponseBody> infoCall = info.getInfo();
+            infoCall.enqueue(informationCallback);
 
         } else {
 
@@ -422,9 +415,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 } catch (JSONException e) {}
 
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+
                 byte[] futureUse = {0x00};
-                byte[] appParam  = Base64.decode(info.getString("appID"), Base64.DEFAULT);
-                byte[] challenge = Base64.decode(clientData.toString(), Base64.URL_SAFE);
+                byte[] appParam  = md.digest(info.getString("appID").getBytes());
+                byte[] challenge = md.digest(clientData.toString().getBytes());
                 byte[] keyHandle = Base64.decode(keyID, Base64.DEFAULT);
                 byte[] publicKey = bytes.toByteArray();
 
@@ -442,7 +437,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                     displayInPhoneDialog(e.toString());
                 }
 
-                System.out.println(Base64.encodeToString(bytes.toByteArray(), Base64.URL_SAFE));
+                System.out.println(Base64.encodeToString(challenge, Base64.DEFAULT));
                 byte[] signature = Utils.sign(bytes.toByteArray(), keyID);
 
                 //////////////////////////////////////////////////////////////
@@ -474,7 +469,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 try {
 
-                    registrationData.put("clientData", clientData.toString());
+                    registrationData.put("clientData", clientData);
                     registrationData.put("registrationData", Base64.encodeToString(
                             regRes, Base64.DEFAULT));
 
@@ -519,59 +514,30 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
      * internal JSON storage using the `base64AppID` as an index. Then,
      * `challenge` is signed using the private key and the result
      * is sent back to the server.
-     * @param base64AppID A Base64-encoded copy of the server's unique
-     *                    32-byte identity.
      * @param challenge A Base64-encoded challenge of 32 bytes sent
      *                  from the server.
      * @param keyID A Base64-encoded handle of 16 bytes sent from the
      *              server to identify the key it expects to be used
      *              for authentication.
+     * @param serverInfo Stringified JSON containing server details.
      * @return True if an authentication response was successfully
      *          sent, or false if an error occurred.
      */
-    private boolean authenticate(String base64AppID, String challenge, String keyID) {
+    private void authenticate(String challenge, String keyID, String serverInfo) {
 
         try {
 
-            KeyManager keys = new KeyManager(serverRegistrations, false);
-            JSONObject serverInfo = keys.getAuthenticationInfo(base64AppID);
+            KeyManager km = new KeyManager(serverRegistrations, firstRegistration);
+            JSONObject info = new JSONObject(serverInfo);
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-            ByteBuffer buffer = ByteBuffer.allocate(4);
-            buffer.putInt(serverInfo.getInt("counter"));
-
-            byte[] appParam     = Base64.decode(base64AppID, Base64.DEFAULT);
             byte[] userPresence = {0b00000001};
-            byte[] counter      = buffer.array();
-            byte[] challParam   = Base64.decode(challenge, Base64.DEFAULT);
+            byte[] counter      = ByteBuffer.allocate(4).putInt(km.getCounter(keyID)).array();
+            byte[] appParam     = md.digest(info.getString("appID").getBytes());
 
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            os.write(appParam);
-            os.write(userPresence);
-            os.write(counter);
-            os.write(challParam);
-
-            byte[] data = os.toByteArray();
-            byte[] signed = Utils.sign(data, base64AppID);
-
-            KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
-            ks.load(null);
-            PublicKey pubKey = ks.getCertificate(base64AppID).getPublicKey();
-
-            return true;
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (KeyStoreException e) {
-            e.printStackTrace();
-        } catch (CertificateException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
         } catch (JSONException e) {
-            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
         }
-
-        return false;
 
     }
 
@@ -606,15 +572,22 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                 e.printStackTrace();
             }
 
-            System.out.println(body);
-
             if (body != null) {
 
-                Bundle regData = getIntent().getExtras();
-                String challenge = regData.getString("challenge");
-                String infoURL = regData.getString("infoURL");
+                Bundle data = getIntent().getExtras();
+                String challenge = data.getString("challenge");
 
-                register(challenge, infoURL, body);
+                if (data.getString("type").equals("R")) {
+
+                    String infoURL = data.getString("infoURL");
+                    register(challenge, infoURL, body);
+
+                } else if (data.getString("type").equals("A")) {
+
+                    String keyID = data.getString("keyID");
+                    authenticate(challenge, keyID, body);
+
+                }
 
             }
 
