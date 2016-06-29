@@ -129,7 +129,6 @@ public class Utils {
                                 KeyProperties.PURPOSE_SIGN)
                                 .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
                                 .setDigests(KeyProperties.DIGEST_SHA256)
-                                .setKeySize(65 * 8)
                                 .setUserAuthenticationRequired(true)
                                 .setUserAuthenticationValidityDurationSeconds(5 * 60)
                                 .build()
@@ -163,12 +162,20 @@ public class Utils {
             } else { return null; }
 
         } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
         } catch (NoSuchProviderException e) {
+            e.printStackTrace();
         } catch (InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
         } catch (IllegalStateException e) {
+            e.printStackTrace();
         } catch (KeyStoreException e) {
+            e.printStackTrace();
         } catch (CertificateException e) {
-        } catch (IOException e) {}
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         return null;
 

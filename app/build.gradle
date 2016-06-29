@@ -25,5 +25,6 @@ dependencies {
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
     compile 'com.android.support:support-v4:23.3.0'
     compile 'com.karumi:dexter:2.2.2'
+    compile 'com.jaredrummler:android-device-names:1.0.9'
     compile project(':commons-io-2.5')
 }

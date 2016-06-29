@@ -3,18 +3,8 @@
     <string name="app_name">2Q2R</string>
     <string name="add">Add</string>
     <string name="okay">Okay</string>
-    <string name="invalid_token">The token specified was invalid!</string>
-    <string name="delete">Delete</string>
-    <string name="edit">Edit</string>
-    <string name="restore_defaults">Restore Defaults</string>
-    <string name="no_keys">No OTP keys installed.</string>
-    <string name="add_token">Add Token</string>
     <string name="scan_qr_code">Scan QR Code</string>
-    <string name="verify_text">To verify yourself, please enter your personal PIN.</string>
-    <string name="empty_pin_fields">Please enter your full PIN to continue.</string>
     <string name="invalid_qr">The QR you have scanned is not a 2Q2R-compliant key.</string>
-    <string name="registration_error">Sorry, there was an error during registration.</string>
-    <string name="authentication_error">Sorry, there was an error during authentication.</string>
 
     <string name="about_freeotp">About FreeOTP</string>
     <string name="about_version">FreeOTP Version %1$s (%2$d)</string>
@@ -34,6 +24,16 @@
     <string name="error_attaching_camera">Failed to open camera preview.</string>
     <string name="error_no_perms">Camera access denied!</string>
     <string name="camera_required">You must allow camera access to scan QR codes.</string>
+
+    <string name="outdated_device_error">Your device is outdated. Please upgrade to Android 4.4 (KitKat) or newer.</string>
+    <string name="key_gen_error">Sorry, there was an error generating a key-pair for your registration. Please make sure your phone has password protection turned on, and try again.</string>
+    <string name="key_access_error">Error while retrieving your key! Please double-check to make sure this is the device you decided to authenticate with, and your phone must also have a password in order to access keys securely.</string>
+    <string name="registration_gen_error">An error was encountered while producing a registration response for the server. Please try scanning the QR again.</string>
+    <string name="authentication_gen_error">An error was encountered while producing an authentication response for the server. Please try scanning the QR again</string>
+    <string name="internet_error">Your device is not connected to the internet. Please connect and try again.</string>
+    <string name="info_request_error">There was an error while retrieving info from the server. The response code was:\n</string>
+    <string name="registration_request_error">There was an error while sending the registration to the server. The response code was:\</string>
+    <string name="authentication_request_error">There was an error while sending the authentication to the server. The response code was:</string>
 
     <string-array name="algorithms">
         <item>MD5</item>

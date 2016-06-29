@@ -28,6 +28,7 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
+import android.media.Image;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -42,6 +43,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.TextView;
 
+import com.jaredrummler.android.device.DeviceName;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
 import com.karumi.dexter.listener.single.PermissionListener;
@@ -419,7 +421,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 byte[] futureUse = {0x00};
                 byte[] appParam  = md.digest(info.getString("appID").getBytes());
-                byte[] challenge = md.digest(clientData.toString().getBytes());
+                byte[] challenge = md.digest(clientData.toString().replace("\\", "").getBytes());
                 byte[] keyHandle = Base64.decode(keyID, Base64.DEFAULT);
                 byte[] publicKey = bytes.toByteArray();
 
@@ -437,7 +439,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                     displayInPhoneDialog(e.toString());
                 }
 
-                System.out.println(Base64.encodeToString(challenge, Base64.DEFAULT));
                 byte[] signature = Utils.sign(bytes.toByteArray(), keyID);
 
                 //////////////////////////////////////////////////////////////
@@ -469,6 +470,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 try {
 
+                    registrationData.put("deviceName", DeviceName.getDeviceName());
                     registrationData.put("clientData", clientData);
                     registrationData.put("registrationData", Base64.encodeToString(
                             regRes, Base64.DEFAULT));
@@ -489,22 +491,29 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
             } else if (Build.VERSION.SDK_INT < 19) {
 
-                displayInPhoneDialog("Your device is outdated. Please upgrade to Android 4.4 " +
-                    "(KitKat) or newer.");
+                displayInPhoneDialog(getString(R.string.outdated_device_error));
 
             } else {
 
-                displayInPhoneDialog("You must have a lock on your device in order to securely " +
-                    "generate keys. Additionally, if you turn off the security measure on your " +
-                    "device, all existing keys may be deleted and cannot be recovered.");
+                displayInPhoneDialog(getString(R.string.key_gen_error));
 
             }
 
         } catch (JSONException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.registration_gen_error));
         } catch (KeyStoreException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.key_gen_error));
         } catch (CertificateException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.key_gen_error));
         } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.key_gen_error));
         } catch (IOException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.registration_gen_error));
         }
 
     }
@@ -514,38 +523,84 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
      * internal JSON storage using the `base64AppID` as an index. Then,
      * `challenge` is signed using the private key and the result
      * is sent back to the server.
-     * @param challenge A Base64-encoded challenge of 32 bytes sent
+     * @param challengeB64 A Base64-encoded challenge of 32 bytes sent
      *                  from the server.
      * @param keyID A Base64-encoded handle of 16 bytes sent from the
      *              server to identify the key it expects to be used
      *              for authentication.
      * @param serverInfo Stringified JSON containing server details.
-     * @return True if an authentication response was successfully
-     *          sent, or false if an error occurred.
      */
-    private void authenticate(String challenge, String keyID, String serverInfo) {
+    private void authenticate(String challengeB64, String keyID, String serverInfo) {
 
         try {
 
             KeyManager km = new KeyManager(serverRegistrations, firstRegistration);
             JSONObject info = new JSONObject(serverInfo);
+            JSONObject clientData = new JSONObject();
             MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+            clientData.put("typ", "navigator.id.getAssertion");
+            clientData.put("challenge", challengeB64);
+            clientData.put("origin", info.getString("baseURL"));
 
             byte[] userPresence = {0b00000001};
             byte[] counter      = ByteBuffer.allocate(4).putInt(km.getCounter(keyID)).array();
             byte[] appParam     = md.digest(info.getString("appID").getBytes());
+            byte[] challenge    = md.digest(challengeB64.getBytes());
 
-        } catch (JSONException e) {
-        } catch (NoSuchAlgorithmException e) {
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+
+            os.write(appParam);
+            os.write(userPresence);
+            os.write(counter);
+            os.write(challenge);
+
+            byte[] signature = Utils.sign(os.toByteArray(), keyID);
+
+            os.reset();
+
+            os.write(userPresence);
+            os.write(counter);
+            os.write(signature);
+
+            byte[] signatureData = os.toByteArray();
+
+            if (signatureData == null) {
+                displayInPhoneDialog(getString(R.string.key_access_error));
+                return;
+            }
+
+            JSONObject authData = new JSONObject()
+                    .put("clientData", challengeB64)
+                    .put("signatureData", signatureData);
+
+            MediaType media = MediaType.parse("application/json; charset=utf-8");
+
+            RequestBody data = RequestBody.create(media, authData.toString());
+
+            Retrofit retro = new Retrofit.Builder()
+                    .baseUrl(info.getString("baseURL"))
+                    .build();
+
+            U2FServices.Authentication reg = retro.create(U2FServices.Authentication.class);
+            Call<ResponseBody> regCall = reg.authenticate(data);
+            regCall.enqueue(authenticationCallback);
+
+        } catch (Exception e) {
+
+            displayInPhoneDialog("The application encountered an error while generating" +
+                "an authentication response. Please try scanning the QR again.");
+
         }
 
     }
 
     /**
-     * For debugging purposes only.
-     * @param text Text to display on the phone.
+     * Convenience method for displaying a dialog.
+     * @param text Text to display in the dialog.
+     * param img The image to display underneath the text.
      */
-    private void displayInPhoneDialog(String text) {
+    private void displayInPhoneDialog(String text/*, Image img*/) {
 
         Intent intent = new Intent(this, ErrorDialog.class);
         Bundle b = new Bundle();
@@ -596,8 +651,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            displayInPhoneDialog("Failed to retrieve info from\n" + getIntent().getExtras()
-                .getString("infoURL") + "!");
+            displayInPhoneDialog(getString(R.string.info_request_error));
         }
 
     }
@@ -630,7 +684,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         @Override
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
-            String body = null;
+            String body = "No response.";
 
             try {
                 body = response.body().string();
@@ -646,7 +700,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
-            displayInPhoneDialog("Failed to register with server!" + "\n" + t.toString());
+            t.printStackTrace();
+            displayInPhoneDialog(getString(R.string.registration_request_error));
         }
 
     }
@@ -664,7 +719,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
-
+            t.printStackTrace();
+            displayInPhoneDialog(getString(R.string.authentication_request_error));
         }
 
     }
