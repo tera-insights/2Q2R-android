@@ -28,12 +28,14 @@
     <string name="outdated_device_error">Your device is outdated. Please upgrade to Android 4.4 (KitKat) or newer.</string>
     <string name="key_gen_error">Sorry, there was an error generating a key-pair for your registration. Please make sure your phone has password protection turned on, and try again.</string>
     <string name="key_access_error">Error while retrieving your key! Please double-check to make sure this is the device you decided to authenticate with, and your phone must also have a password in order to access keys securely.</string>
+    <string name="existing_registration_error">It appears you already have this device registered to your account, meaning you can just go ahead and use it to authenticate.</string>
+    <string name="auth_timeout_error">Sorry, the authentication could not be completed because your phone has not been authorized recently enough. Please lock and unlock your phone, then scan the QR again.</string>
     <string name="registration_gen_error">An error was encountered while producing a registration response for the server. Please try scanning the QR again.</string>
     <string name="authentication_gen_error">An error was encountered while producing an authentication response for the server. Please try scanning the QR again</string>
     <string name="internet_error">Your device is not connected to the internet. Please connect and try again.</string>
     <string name="info_request_error">There was an error while retrieving info from the server. The response code was:\n</string>
-    <string name="registration_request_error">There was an error while sending the registration to the server. The response code was:\</string>
-    <string name="authentication_request_error">There was an error while sending the authentication to the server. The response code was:</string>
+    <string name="registration_request_error">There was an error while sending the registration to the server. The response code was:\n</string>
+    <string name="authentication_request_error">There was an error while sending the authentication to the server. The response code was:\n</string>
 
     <string-array name="algorithms">
         <item>MD5</item>

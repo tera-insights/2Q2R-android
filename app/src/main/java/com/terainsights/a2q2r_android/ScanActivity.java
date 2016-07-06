@@ -134,7 +134,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         Dexter.checkPermission(listener, Manifest.permission.CAMERA);
 
         setContentView(R.layout.scan);
-        serverRegistrations = new File(getFilesDir(), "registrations.txt");
+        serverRegistrations = new File(getFilesDir(), "registrations.json");
 
         try {
             firstRegistration = serverRegistrations.createNewFile();
@@ -164,7 +164,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     @Override
     public void onDestroy() {
         super.onDestroy();
-        mAsyncScanner.cancel(true);
+        //mAsyncScanner.cancel(true);
     }
 
     @Override
@@ -276,11 +276,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
     File serverRegistrations;
     boolean firstRegistration;
+    KeyManager keyManager;
 
     InformationCallback    informationCallback    = new InformationCallback();
     RegistrationCallback   registrationCallback   = new RegistrationCallback();
     AuthenticationCallback authenticationCallback = new AuthenticationCallback();
-    UserIDCallback         userIDCallback         = new UserIDCallback();
 
     /**
      * This is the U2F entry point for the parsed QR code data, which is
@@ -294,7 +294,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
             String[] splitQR = decodedQR.split(" ");
             String challenge = splitQR[1];
-            String infoURL = splitQR[2];
+            String infoURL   = splitQR[2];
+            String userID    = splitQR[3];
             System.out.println(infoURL);
 
             if (!infoURL.endsWith("/"))
@@ -307,6 +308,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
             Bundle regData = new Bundle();
             regData.putString("challenge", challenge);
             regData.putString("infoURL", infoURL);
+            regData.putString("userID", userID);
             regData.putString("type", "R");
             getIntent().putExtras(regData);
 
@@ -316,13 +318,15 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
         } else if (Utils.identifyQRType(decodedQR) == 'A') {
 
+            System.out.println(decodedQR.replace(" ", "%"));
+
             String[] splitQR   = decodedQR.split(" ");
             String base64AppID = splitQR[1];
             String challenge   = splitQR[2];
             String keyID       = splitQR[3];
 
             KeyManager keyManager = new KeyManager(serverRegistrations, firstRegistration);
-            String infoURL = keyManager.getServerInfoURL(base64AppID);
+            String infoURL = keyManager.getInfoURL(base64AppID);
 
             Retrofit retro = new Retrofit.Builder()
                     .baseUrl(infoURL)
@@ -358,7 +362,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
      *                information object, `serverInfo` (already obtained).
      * @param serverInfo Stringified JSON containing server details.
      */
-    private void register(String challengeB64, String infoURL, String serverInfo) {
+    private void register(String challengeB64, String infoURL, String serverInfo, String userID) {
 
         try {
 
@@ -368,13 +372,13 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
             if (pubKey != null) {
 
-                KeyManager keyManager = new KeyManager(serverRegistrations, firstRegistration);
+                keyManager = new KeyManager(serverRegistrations, firstRegistration);
 
                 keyManager.registerWithServer(
                         info.getString("appID"),
-                        info.getString("appName"),
                         infoURL,
-                        keyID
+                        keyID,
+                        userID
                 );
 
                 keyManager.saveRegistrations();
@@ -393,29 +397,16 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 
-                try {
-
-                    bytes.write(pref);
-                    bytes.write(keyX, keyX.length - 32, 32);
-                    bytes.write(keyY, keyY.length - 32, 32);
-                    System.out.println("Successfully parsed the public key.");
-
-                } catch (IOException e) {
-                } catch (IndexOutOfBoundsException e) {
-                    displayInPhoneDialog("The public key X was of length: " + keyX.length);
-                }
+                bytes.write(pref);
+                bytes.write(keyX, keyX.length - 32, 32);
+                bytes.write(keyY, keyY.length - 32, 32);
 
                 //////////////////////////////////////////////////////////////
 
-                JSONObject clientData = new JSONObject();
-
-                try {
-
-                    clientData.put("typ", "navigator.id.finishEnrollment");
-                    clientData.put("challenge", challengeB64);
-                    clientData.put("origin", info.getString("baseURL"));
-
-                } catch (JSONException e) {}
+                JSONObject clientData = new JSONObject()
+                    .put("typ", "navigator.id.finishEnrollment")
+                    .put("challenge", challengeB64)
+                    .put("origin", info.getString("baseURL"));
 
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
 
@@ -427,17 +418,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 bytes.reset();
 
-                try {
-
-                    bytes.write(futureUse);
-                    bytes.write(appParam);
-                    bytes.write(challenge);
-                    bytes.write(keyHandle);
-                    bytes.write(publicKey);
-
-                } catch (IOException e) {
-                    displayInPhoneDialog(e.toString());
-                }
+                bytes.write(futureUse);
+                bytes.write(appParam);
+                bytes.write(challenge);
+                bytes.write(keyHandle);
+                bytes.write(publicKey);
 
                 byte[] signature = Utils.sign(bytes.toByteArray(), keyID);
 
@@ -449,18 +434,12 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 bytes.reset();
 
-                try {
-
-                    bytes.write(reserved);
-                    bytes.write(publicKey);
-                    bytes.write(handleLength);
-                    bytes.write(keyHandle);
-                    bytes.write(certificate);
-                    bytes.write(signature);
-
-                } catch (IOException e) {
-                    displayInPhoneDialog(e.toString());
-                }
+                bytes.write(reserved);
+                bytes.write(publicKey);
+                bytes.write(handleLength);
+                bytes.write(keyHandle);
+                bytes.write(certificate);
+                bytes.write(signature);
 
                 byte[] regRes = bytes.toByteArray();
 
@@ -468,14 +447,10 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 JSONObject registrationData = new JSONObject();
 
-                try {
-
-                    registrationData.put("deviceName", DeviceName.getDeviceName());
-                    registrationData.put("clientData", clientData);
-                    registrationData.put("registrationData", Base64.encodeToString(
-                            regRes, Base64.DEFAULT));
-
-                } catch (JSONException e) {}
+                registrationData.put("deviceName", DeviceName.getDeviceName());
+                registrationData.put("clientData", clientData);
+                registrationData.put("registrationData", Base64.encodeToString(
+                        regRes, Base64.DEFAULT));
 
                 MediaType media = MediaType.parse("application/json; charset=utf-8");
 
@@ -514,6 +489,12 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         } catch (IOException e) {
             e.printStackTrace();
             displayInPhoneDialog(getString(R.string.registration_gen_error));
+        } catch (Utils.AuthExpiredException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.auth_timeout_error));
+        } catch (KeyManager.UserAlreadyRegisteredException e) {
+            e.printStackTrace();
+            displayInPhoneDialog(getString(R.string.existing_registration_error));
         }
 
     }
@@ -534,19 +515,20 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
         try {
 
-            KeyManager km = new KeyManager(serverRegistrations, firstRegistration);
+            KeyManager km = keyManager;
             JSONObject info = new JSONObject(serverInfo);
-            JSONObject clientData = new JSONObject();
+
+            JSONObject clientData = new JSONObject()
+                .put("typ", "navigator.id.getAssertion")
+                .put("challenge", challengeB64)
+                .put("origin", info.getString("baseURL"));
+
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-            clientData.put("typ", "navigator.id.getAssertion");
-            clientData.put("challenge", challengeB64);
-            clientData.put("origin", info.getString("baseURL"));
-
             byte[] userPresence = {0b00000001};
-            byte[] counter      = ByteBuffer.allocate(4).putInt(km.getCounter(keyID)).array();
+            byte[] counter      = km.getCounter(keyID);
             byte[] appParam     = md.digest(info.getString("appID").getBytes());
-            byte[] challenge    = md.digest(challengeB64.getBytes());
+            byte[] challenge    = md.digest(clientData.toString().replace("\\", "").getBytes());
 
             ByteArrayOutputStream os = new ByteArrayOutputStream();
 
@@ -635,7 +617,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                 if (data.getString("type").equals("R")) {
 
                     String infoURL = data.getString("infoURL");
-                    register(challenge, infoURL, body);
+                    String userID  = data.getString("userID");
+                    register(challenge, infoURL, body, userID);
 
                 } else if (data.getString("type").equals("A")) {
 

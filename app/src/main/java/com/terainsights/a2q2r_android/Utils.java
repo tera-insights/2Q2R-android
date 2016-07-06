@@ -1,10 +1,12 @@
 package com.terainsights.a2q2r_android;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.os.Build;
 import android.security.KeyPairGeneratorSpec;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.security.keystore.UserNotAuthenticatedException;
 import android.util.Base64;
 
 import java.io.IOException;
@@ -52,27 +54,27 @@ public class Utils {
 
         if (split[0].equals("R")) {
 
-            if (split.length != 3)
-                return '1';
+            if (split.length != 4)
+                return 0;
 
             if (Base64.decode(split[1], Base64.URL_SAFE).length != 32)
-                return '2';
+                return 0;
 
             if (!split[2].matches("[a-zA-Z0-9:/\\.]+"))
-                return '3';
+                return 0;
 
             return 'R';
 
         } else if (split[0].equals("A")) {
 
             if (split.length != 4)
-                return '4';
+                return 0;
 
             if (Base64.decode(split[1], Base64.DEFAULT).length != 32)
-                return '5';
+                return 0;
 
-            if (Base64.decode(split[2], Base64.DEFAULT).length != 32)
-                return '6';
+            if (Base64.decode(split[2], Base64.URL_SAFE).length != 32)
+                return 0;
 
             return 'A';
 
@@ -189,7 +191,7 @@ public class Utils {
      * @return A signature over `data` using a key looked up in the KeyStore
      *          using `index`.
      */
-    public static byte[] sign(byte[] data, String index) {
+    public static byte[] sign(byte[] data, String index) throws AuthExpiredException {
 
         try {
 
@@ -220,10 +222,17 @@ public class Utils {
             e.printStackTrace();
         } catch (UnrecoverableEntryException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            throw new AuthExpiredException();
         }
 
         return null;
 
     }
+
+    /**
+     * Used in place of {@link UserNotAuthenticatedException} for backwards compatibility.
+     */
+    public static class AuthExpiredException extends Exception {}
 
 }

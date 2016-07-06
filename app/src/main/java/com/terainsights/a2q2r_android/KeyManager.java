@@ -1,5 +1,6 @@
 package com.terainsights.a2q2r_android;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -9,8 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.ByteBuffer;
 
 /**
  * Class for modification of a server registration file.
@@ -45,14 +45,17 @@ public class KeyManager {
      */
     private void loadServerRegs(boolean firstRegistration) {
 
-        if (firstRegistration) {
-
-            serverRegs = new JSONObject();
-            return;
-
-        }
-
         try {
+
+            if (true) {
+
+                serverRegs = new JSONObject()
+                        .put("servers", new JSONObject())
+                        .put("keys", new JSONObject());
+
+                return;
+
+            }
 
             FileReader reader = new FileReader(file);
             StringBuilder sb = new StringBuilder();
@@ -68,75 +71,83 @@ public class KeyManager {
 
             }
 
-            if (sb.length() > 0)
+            if (sb.length() > 0) {
+
                 serverRegs = new JSONObject(sb.toString());
+                return;
+
+            }
+
+            System.out.println("The file was " + sb.length() + " characters long!");
+            System.out.println(file.isFile());
 
         } catch (FileNotFoundException e) {
             System.err.println("Registration file not found!");
         } catch (IOException e) {
             System.err.println("Failed to read registration file into a String!");
         } catch (JSONException e) {
-            System.err.println(e.toString());
+            System.err.println("The registrations file was corrupted.");
         }
 
         serverRegs = new JSONObject();
-        System.out.println("The file was empty and is a " + (file.isFile() ? "file" : "directory") + ".");
 
     }
 
     /**
-     * Appends a new server registration object to cache, or updates the `appName` and
-     * `infoURL` if the server already exists. Does NOT actually register with the
-     * server--registration and authentication operations are handled by the ScanActivity.
+     * Appends a new server registration object to cache, or updates existing data.
+     * This does NOT perform any U2F operations--it only stores data.
      * @param appID The application ID of the server; unique for each server. This
      *              is also used as an index to access the proper registration data
      *              whenever the user authenticates their identity.
-     * @param appName User-legible server identifier, which may be used in GUI's.
      * @param infoURL URL containing standardized information on communication with
      *                the server.
-     * @return True if a registration object was successfully added to cache, or an
-     *          existing object was updated.
+     * @param keyID The handle for the key pair generated for the user registration.
+     * @param userID The username of the registering account. Storing usernames on the
+     *               phone ensures that the app can prevent the user from wastefully
+     *               registering the same account multiple times on the same device.
+     * @throws UserAlreadyRegisteredException if the user already registered the device.
+     * @throws JSONException if an error occurred while saving the registration.
      */
-    public boolean registerWithServer(String appID, String appName, String infoURL, String keyID) {
+    public void registerWithServer(String appID, String infoURL, String keyID, String userID)
+            throws UserAlreadyRegisteredException, JSONException {
 
-        try {
+        System.out.println(serverRegs.toString());
+        JSONObject servers = serverRegs.getJSONObject("servers");
+        JSONObject keys    = serverRegs.getJSONObject("keys");
 
-            if (serverRegs.has(appID)) {
+        if (servers.has(appID)) {
 
-                serverRegs.getJSONObject(appID)
-                    .put("appName", appName)
-                    .put("infoURL", infoURL);
-                ((List<String>) serverRegs.getJSONObject(appID).get("keyID's")).add(keyID);
+            servers.getJSONObject(appID).put("infoURL", infoURL);
+            JSONArray users = servers.getJSONObject(appID).getJSONArray("users");
 
-            }
+            if (users.toString().contains("\"" + userID + "\""))
+                throw new UserAlreadyRegisteredException();
+            else
+                users.put(userID);
 
-            JSONObject obj = new JSONObject()
-                .put("appName", appName)
-                .put("infoURL", infoURL)
-                .put("counter", 0)
-                .put("keyID's", new ArrayList<String>());
+        } else {
 
-            serverRegs.put(appID, obj);
-            return true;
+            servers.put(appID, new JSONObject()
+                    .put("infoURL", infoURL)
+                    .put("users", new JSONArray()
+                            .put(userID)));
 
-        } catch (JSONException e) { return false; }
+        }
+
+        keys.put(keyID, 0); // create a counter for the key
 
     }
 
     /**
-     * Retrieves the information needed for an authentication operation
-     * with the given server.
-     * @param base64AppID The application ID [Base64 of 32 bytes] of
-     *                    the server sending the request. Used to
-     *                    lookup the server's information.
-     * @return The infoURL for the given server, or null if the device
-     *          doesn't have any records of that server.
+     * Grabs the `infoURL` for a given server.
+     * @param appID The Base64 server ID.
+     * @return The `infoURL` for the given server, or null if it wasn't found.
      */
-    public String getServerInfoURL(String base64AppID) {
+    public String getInfoURL(String appID) {
 
         try {
 
-            return serverRegs.getString(base64AppID);
+            return serverRegs.getJSONObject("servers").getJSONObject(appID).getString("infoURL");
 
         } catch (JSONException e) {
 
@@ -147,48 +158,34 @@ public class KeyManager {
     }
 
     /**
-     * Retrieves the counter corresponding to a particular key on the
-     * device. Used to protect against middleman attacks.
-     * @param base64KeyID [Base64 of 16 bytes] the key handle used
-     *                    to index the private key in the Android
-     *                    KeyStore, and to retrieve the counter
-     *                    for the key.
-     * @return A 4-byte integer describing the number of times the
-     *          key has been used for authentication, or -1 if their
-     *          was an error searching the JSON using the key handle.
+     * Checks and updates the U2F counter for the given key handle.
+     * @param keyID The handle for the key being used.
+     * @return [4 bytes] The number of times the key has been used.
+     * @throws JSONException if the counter couldn't be found for the
+     *         given key handle.
      */
-    public int getCounter(String base64KeyID) {
+    public byte[] getCounter(String keyID) throws JSONException {
 
-        try {
-
-            int counter = serverRegs.getJSONObject("keyInfo").getJSONObject(base64KeyID)
-                    .getInt("counter");
-            serverRegs.getJSONObject("keyInfo").getJSONObject(base64KeyID).put("counter",
-                    counter + 1);
-
-            return counter;
-
-        } catch (JSONException e) {
-            return -1;
-        }
+        int counter = serverRegs.getJSONObject("keys").getInt(keyID);
+        serverRegs.getJSONObject("keys").put(keyID, counter + 1);
+        return ByteBuffer.allocate(4).putInt(counter).array();
 
     }
 
     /**
      * Saves all of the device's registrations in cache to internal storage.
+     * @throws IOException if there was an issue writing the file.
      */
-    public void saveRegistrations() {
+    public void saveRegistrations() throws IOException {
 
-        try {
-
-            BufferedWriter fileWriter = new BufferedWriter(new FileWriter(file, false));
-            fileWriter.write(serverRegs.toString());
-            System.out.println("Successfully saved registrations to file.");
-
-        } catch (IOException e) {
-            System.err.println("Failed to save registrations to file!");
-        }
+        BufferedWriter fileWriter = new BufferedWriter(new FileWriter(file, false));
+        fileWriter.write(serverRegs.toString());
 
     }
+
+    /**
+     * Thrown if a user attempts to register twice on the same device.
+     */
+    class UserAlreadyRegisteredException extends Exception {}
 
 }
