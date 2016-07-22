@@ -5,13 +5,13 @@
     android:orientation="vertical" >
 
     <TextView
-        android:id="@+id/invalid_qr"
+        android:id="@+id/dialog_text"
+        android:layout_margin="16dp"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_marginTop="15sp"
-        android:gravity="center"
-        android:text="@string/invalid_qr" />
+        android:gravity="center" />
 
     <Button
         android:id="@+id/okay_button"
@@ -19,6 +19,6 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:text="@string/okay"
-        style="@android:style/Theme.Holo.Light.DarkActionBar" />
+        style="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
 
 </RelativeLayout>

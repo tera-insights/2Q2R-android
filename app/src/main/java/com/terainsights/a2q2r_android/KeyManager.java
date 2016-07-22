@@ -11,6 +11,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Scanner;
 
 /**
  * Class for modification of a server registration file.
@@ -30,7 +31,7 @@ public class KeyManager {
      * @param firstRegistration True if the file does not contain any
      *                          existing registration information.
      */
-    public KeyManager(File file, boolean firstRegistration) {
+    public KeyManager(File file, boolean firstRegistration) throws FileNotFoundException {
 
         this.file = file;
         loadServerRegs(firstRegistration);
@@ -43,53 +44,36 @@ public class KeyManager {
      *                          server information, and the reading operation
      *                          can be skipped.
      */
-    private void loadServerRegs(boolean firstRegistration) {
+    private void loadServerRegs(boolean firstRegistration) throws FileNotFoundException {
 
         try {
 
-            if (true) {
+            if (!firstRegistration) {
 
-                serverRegs = new JSONObject()
-                        .put("servers", new JSONObject())
-                        .put("keys", new JSONObject());
+                Scanner sc = new Scanner(file);
+                StringBuilder sb = new StringBuilder();
 
-                return;
+                while (sc.hasNext())
+                    sb.append(sc.next());
 
-            }
+                if (sb.length() > 0) {
 
-            FileReader reader = new FileReader(file);
-            StringBuilder sb = new StringBuilder();
+                    serverRegs = new JSONObject(sb.toString());
+                    return;
 
-            while (reader.ready()) {
-
-                int c = reader.read();
-
-                if (c == -1)
-                    break;
-
-                sb.append(c);
+                }
 
             }
 
-            if (sb.length() > 0) {
+            serverRegs = new JSONObject()
+                    .put("servers", new JSONObject())
+                    .put("keys", new JSONObject());
 
-                serverRegs = new JSONObject(sb.toString());
-                return;
+            return;
 
-            }
-
-            System.out.println("The file was " + sb.length() + " characters long!");
-            System.out.println(file.isFile());
-
-        } catch (FileNotFoundException e) {
-            System.err.println("Registration file not found!");
-        } catch (IOException e) {
-            System.err.println("Failed to read registration file into a String!");
         } catch (JSONException e) {
             System.err.println("The registrations file was corrupted.");
         }
-
-        serverRegs = new JSONObject();
 
     }
 
@@ -111,7 +95,6 @@ public class KeyManager {
     public void registerWithServer(String appID, String infoURL, String keyID, String userID)
             throws UserAlreadyRegisteredException, JSONException {
 
-        System.out.println(serverRegs.toString());
         JSONObject servers = serverRegs.getJSONObject("servers");
         JSONObject keys    = serverRegs.getJSONObject("keys");
 
@@ -135,6 +118,7 @@ public class KeyManager {
         }
 
         keys.put(keyID, 0); // create a counter for the key
+        System.out.println("Registrations:\n" + serverRegs.toString(4));
 
     }
 
@@ -166,7 +150,9 @@ public class KeyManager {
      */
     public byte[] getCounter(String keyID) throws JSONException {
 
+        System.out.println("Do we have the counter?");
         int counter = serverRegs.getJSONObject("keys").getInt(keyID);
+        System.out.println("We do.");
         serverRegs.getJSONObject("keys").put(keyID, counter + 1);
         return ByteBuffer.allocate(4).putInt(counter).array();
 
@@ -178,14 +164,26 @@ public class KeyManager {
      */
     public void saveRegistrations() throws IOException {
 
-        BufferedWriter fileWriter = new BufferedWriter(new FileWriter(file, false));
+        System.out.println("File path: " + file.getAbsolutePath().toString());
+        BufferedWriter fileWriter = new BufferedWriter(new FileWriter(file.getAbsolutePath().toString()));
         fileWriter.write(serverRegs.toString());
+        fileWriter.close();
+
+        System.out.println("File saved as:");
+
+        Scanner sc = new Scanner(file);
+
+        while (sc.hasNextLine()) {
+            System.out.println(sc.nextLine());
+        }
+
+        System.out.println("The scanner didn't encounter an error.");
 
     }
 
     /**
      * Thrown if a user attempts to register twice on the same device.
      */
-    class UserAlreadyRegisteredException extends Exception {}
+    static class UserAlreadyRegisteredException extends Exception {}
 
 }

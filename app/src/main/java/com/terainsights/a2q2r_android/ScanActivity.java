@@ -24,17 +24,13 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.hardware.Camera;
-import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
-import android.media.Image;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,6 +39,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.TextView;
 
+import com.google.firebase.iid.FirebaseInstanceId;
 import com.jaredrummler.android.device.DeviceName;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
@@ -53,8 +50,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
@@ -65,6 +62,8 @@ import java.security.cert.CertificateException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECPoint;
 import java.util.List;
+import java.util.Scanner;
+
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
@@ -95,7 +94,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
      *                                                                                            *
      **********************************************************************************************/
 
-    private final CameraInfo mCameraInfo = new CameraInfo();
     private ScanAsyncTask mAsyncScanner;
     private Handler mHandler;
     private Camera mCamera;
@@ -123,6 +121,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        System.out.println(FirebaseInstanceId.getInstance().getToken());
 
         Dexter.initialize(getApplicationContext());
         PermissionListener listener = DialogOnDeniedPermissionListener.Builder
@@ -135,6 +134,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
         setContentView(R.layout.scan);
         serverRegistrations = new File(getFilesDir(), "registrations.json");
+
+        printFile(serverRegistrations);
 
         try {
             firstRegistration = serverRegistrations.createNewFile();
@@ -157,14 +158,13 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     @Override
     public void onResume() {
         super.onResume();
-        mAsyncScanner = new ScanAsyncTask(this);
-        mAsyncScanner.execute();
+        restartScanner();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        //mAsyncScanner.cancel(true);
+        mAsyncScanner.cancel(true);
     }
 
     @Override
@@ -268,6 +268,15 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
     }
 
+    /**
+     * Convenience method to restart the scanning thread so another QR
+     * can be scanned.
+     */
+    private void restartScanner() {
+        mAsyncScanner = new ScanAsyncTask(this);
+        mAsyncScanner.execute();
+    }
+
     /**********************************************************************************************
      *                                                                                            *
      *                          U2F Registration and Authentication                               *
@@ -277,10 +286,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     File serverRegistrations;
     boolean firstRegistration;
     KeyManager keyManager;
-
-    InformationCallback    informationCallback    = new InformationCallback();
-    RegistrationCallback   registrationCallback   = new RegistrationCallback();
-    AuthenticationCallback authenticationCallback = new AuthenticationCallback();
 
     /**
      * This is the U2F entry point for the parsed QR code data, which is
@@ -296,7 +301,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
             String challenge = splitQR[1];
             String infoURL   = splitQR[2];
             String userID    = splitQR[3];
-            System.out.println(infoURL);
 
             if (!infoURL.endsWith("/"))
                 infoURL += "/";
@@ -312,21 +316,32 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
             regData.putString("type", "R");
             getIntent().putExtras(regData);
 
-            U2FServices.ServerInfo info = retro.create(U2FServices.ServerInfo.class);
+            U2F.ServerInfo info = retro.create(U2F.ServerInfo.class);
             Call<ResponseBody> infoCall = info.getInfo();
-            infoCall.enqueue(informationCallback);
+            infoCall.enqueue(new InformationCallback());
 
         } else if (Utils.identifyQRType(decodedQR) == 'A') {
-
-            System.out.println(decodedQR.replace(" ", "%"));
 
             String[] splitQR   = decodedQR.split(" ");
             String base64AppID = splitQR[1];
             String challenge   = splitQR[2];
             String keyID       = splitQR[3];
 
-            KeyManager keyManager = new KeyManager(serverRegistrations, firstRegistration);
-            String infoURL = keyManager.getInfoURL(base64AppID);
+            printFile(serverRegistrations);
+
+            String infoURL;
+
+            try {
+
+                keyManager = new KeyManager(serverRegistrations, firstRegistration);
+                infoURL    = keyManager.getInfoURL(base64AppID);
+
+            } catch (FileNotFoundException e) {
+
+                displayInPhoneDialog(getString(R.string.corrupted_registrations_error));
+                return;
+
+            }
 
             Retrofit retro = new Retrofit.Builder()
                     .baseUrl(infoURL)
@@ -338,13 +353,13 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
             authData.putString("type", "A");
             getIntent().putExtras(authData);
 
-            U2FServices.ServerInfo info = retro.create(U2FServices.ServerInfo.class);
+            U2F.ServerInfo info = retro.create(U2F.ServerInfo.class);
             Call<ResponseBody> infoCall = info.getInfo();
-            infoCall.enqueue(informationCallback);
+            infoCall.enqueue(new InformationCallback());
 
         } else {
 
-            displayInPhoneDialog(getString(R.string.invalid_qr));
+            displayInPhoneDialog(getString(R.string.invalid_qr_error));
 
         }
 
@@ -357,10 +372,13 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
      * "/register" directory of the baseURL obtained from the relying
      * party's `infoURL`.
      * @param challengeB64 A challenge provided by the server that the device is
-     *                     being registered with [Base64 of 32 bytes].
+     *                     being registered with [web-safe-Base64 of 32 bytes].
      * @param infoURL The URL embedded in the QR code, pointing to the server's
      *                information object, `serverInfo` (already obtained).
      * @param serverInfo Stringified JSON containing server details.
+     * @param userID The username of the account registering the device, used to
+     *               prevent multiple registrations of the same device to the
+     *               same account.
      */
     private void register(String challengeB64, String infoURL, String serverInfo, String userID) {
 
@@ -374,14 +392,25 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 keyManager = new KeyManager(serverRegistrations, firstRegistration);
 
-                keyManager.registerWithServer(
-                        info.getString("appID"),
-                        infoURL,
-                        keyID,
-                        userID
-                );
+                Bundle extras = getIntent().getExtras();
 
-                keyManager.saveRegistrations();
+                extras.putString("appID", info.getString("appID"));
+                extras.putString("infoURL", infoURL);
+                extras.putString("keyID", keyID);
+                extras.putString("userID", userID);
+
+                System.out.println("Server registrations:");
+                System.out.println(keyManager.serverRegs.toString(4));
+
+                JSONObject servers = keyManager.serverRegs.getJSONObject("servers");
+
+                if (servers.has(info.getString("appID")) && servers
+                        .getJSONObject(info.getString("appID")).getJSONArray("users")
+                        .toString().contains("\"" + userID + "\"")) {
+
+                    throw new KeyManager.UserAlreadyRegisteredException();
+
+                }
 
                 KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
                 ks.load(null);
@@ -403,6 +432,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 //////////////////////////////////////////////////////////////
 
+                // TODO: Take hash and Base64 encode client data on server
                 JSONObject clientData = new JSONObject()
                     .put("typ", "navigator.id.finishEnrollment")
                     .put("challenge", challengeB64)
@@ -413,7 +443,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                 byte[] futureUse = {0x00};
                 byte[] appParam  = md.digest(info.getString("appID").getBytes());
                 byte[] challenge = md.digest(clientData.toString().replace("\\", "").getBytes());
-                byte[] keyHandle = Base64.decode(keyID, Base64.DEFAULT);
+                byte[] keyHandle = Base64.decode(keyID, Base64.URL_SAFE);
                 byte[] publicKey = bytes.toByteArray();
 
                 bytes.reset();
@@ -445,12 +475,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
                 //////////////////////////////////////////////////////////////
 
-                JSONObject registrationData = new JSONObject();
-
-                registrationData.put("deviceName", DeviceName.getDeviceName());
-                registrationData.put("clientData", clientData);
-                registrationData.put("registrationData", Base64.encodeToString(
-                        regRes, Base64.DEFAULT));
+                JSONObject registrationData = new JSONObject()
+                    .put("deviceName", DeviceName.getDeviceName())
+                    .put("fcmToken", FirebaseInstanceId.getInstance().getToken())
+                    .put("clientData", clientData)
+                    .put("registrationData", Base64.encodeToString(regRes, Base64.DEFAULT));
 
                 MediaType media = MediaType.parse("application/json; charset=utf-8");
 
@@ -460,9 +489,9 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                         .baseUrl(info.getString("baseURL"))
                         .build();
 
-                U2FServices.Registration reg = retro.create(U2FServices.Registration.class);
+                U2F.Registration reg = retro.create(U2F.Registration.class);
                 Call<ResponseBody> regCall = reg.register(data);
-                regCall.enqueue(registrationCallback);
+                regCall.enqueue(new RegistrationCallback());
 
             } else if (Build.VERSION.SDK_INT < 19) {
 
@@ -476,10 +505,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
         } catch (JSONException e) {
             e.printStackTrace();
-            displayInPhoneDialog(getString(R.string.registration_gen_error));
         } catch (KeyStoreException e) {
             e.printStackTrace();
-            displayInPhoneDialog(getString(R.string.key_gen_error));
         } catch (CertificateException e) {
             e.printStackTrace();
             displayInPhoneDialog(getString(R.string.key_gen_error));
@@ -504,11 +531,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
      * internal JSON storage using the `base64AppID` as an index. Then,
      * `challenge` is signed using the private key and the result
      * is sent back to the server.
-     * @param challengeB64 A Base64-encoded challenge of 32 bytes sent
-     *                  from the server.
-     * @param keyID A Base64-encoded handle of 16 bytes sent from the
-     *              server to identify the key it expects to be used
-     *              for authentication.
+     * @param challengeB64 A web-safe-Base64-encoded challenge of 32
+     *                     bytes sent from the server.
+     * @param keyID A web-safe-Base64-encoded handle of 16 bytes sent
+     *              from the server to identify the key it expects to
+     *              be used for authentication.
      * @param serverInfo Stringified JSON containing server details.
      */
     private void authenticate(String challengeB64, String keyID, String serverInfo) {
@@ -554,7 +581,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
 
             JSONObject authData = new JSONObject()
                     .put("clientData", challengeB64)
-                    .put("signatureData", signatureData);
+                    .put("signatureData", Base64.encodeToString(signatureData, Base64.URL_SAFE));
 
             MediaType media = MediaType.parse("application/json; charset=utf-8");
 
@@ -564,14 +591,13 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                     .baseUrl(info.getString("baseURL"))
                     .build();
 
-            U2FServices.Authentication reg = retro.create(U2FServices.Authentication.class);
-            Call<ResponseBody> regCall = reg.authenticate(data);
-            regCall.enqueue(authenticationCallback);
+            U2F.Authentication auth = retro.create(U2F.Authentication.class);
+            Call<ResponseBody> authCall = auth.authenticate(data);
+            authCall.enqueue(new AuthenticationCallback());
 
         } catch (Exception e) {
 
-            displayInPhoneDialog("The application encountered an error while generating" +
-                "an authentication response. Please try scanning the QR again.");
+            displayInPhoneDialog(getString(R.string.authentication_gen_error));
 
         }
 
@@ -640,25 +666,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
     }
 
     /**
-     * Describes what should be done once the server has responded to the
-     * device's request for the userID corresponding to the current registration
-     * challenge. Allows the device to block the user from registering it
-     * multiple times with the same account.
-     */
-    private class UserIDCallback implements Callback<ResponseBody> {
-
-        @Override
-        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
-        }
-
-        @Override
-        public void onFailure(Call<ResponseBody> call, Throwable t) {
-
-        }
-    }
-
-    /**
      * Describes what should be done once the the server has responded to the
      * device's registration request.
      */
@@ -675,6 +682,32 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
                 e.printStackTrace();
             } catch (NullPointerException e) {
                 e.printStackTrace();
+            }
+
+            if (response.code() == 200) {
+
+                try {
+
+                    keyManager = new KeyManager(serverRegistrations, firstRegistration);
+                    Bundle extras = getIntent().getExtras();
+
+                    keyManager.registerWithServer(
+                            extras.getString("appID"),
+                            extras.getString("infoURL"),
+                            extras.getString("keyID"),
+                            extras.getString("userID")
+                    );
+
+                    keyManager.saveRegistrations();
+
+                } catch (KeyManager.UserAlreadyRegisteredException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
             }
 
             displayInPhoneDialog(body);
@@ -704,6 +737,26 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback,
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
             displayInPhoneDialog(getString(R.string.authentication_request_error));
+        }
+
+    }
+
+    public static void printFile(File f) {
+
+        try {
+
+            Scanner sc = new Scanner(f);
+
+            while (sc.hasNextLine()) {
+
+                System.out.println(sc.nextLine());
+
+            }
+
+        } catch (Exception e) {
+
+            System.out.println("File didn't exist!");
+
         }
 
     }

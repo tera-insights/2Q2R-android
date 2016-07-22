@@ -22,7 +22,7 @@ public class ErrorDialog extends Activity {
         Bundle b = getIntent().getExtras();
 
         if (b != null) {
-            ((TextView) findViewById(R.id.invalid_qr)).setText(b.getString("info"));
+            ((TextView) findViewById(R.id.dialog_text)).setText(b.getString("info"));
         }
 
         findViewById(R.id.okay_button).setOnClickListener(new View.OnClickListener() {

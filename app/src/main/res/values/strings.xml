@@ -3,8 +3,7 @@
     <string name="app_name">2Q2R</string>
     <string name="add">Add</string>
     <string name="okay">Okay</string>
-    <string name="scan_qr_code">Scan QR Code</string>
-    <string name="invalid_qr">The QR you have scanned is not a 2Q2R-compliant key.</string>
+    <string name="scan_qr">Open Scanner</string>
 
     <string name="about_freeotp">About FreeOTP</string>
     <string name="about_version">FreeOTP Version %1$s (%2$d)</string>
@@ -25,6 +24,8 @@
     <string name="error_no_perms">Camera access denied!</string>
     <string name="camera_required">You must allow camera access to scan QR codes.</string>
 
+    <string name="invalid_qr_error">The QR you have scanned is not a 2Q2R-compliant key.</string>
+    <string name="corrupted_registrations_error">The registrations for this device are corrupted! Would you like to manually edit the file, or delete it?</string>
     <string name="outdated_device_error">Your device is outdated. Please upgrade to Android 4.4 (KitKat) or newer.</string>
     <string name="key_gen_error">Sorry, there was an error generating a key-pair for your registration. Please make sure your phone has password protection turned on, and try again.</string>
     <string name="key_access_error">Error while retrieving your key! Please double-check to make sure this is the device you decided to authenticate with, and your phone must also have a password in order to access keys securely.</string>

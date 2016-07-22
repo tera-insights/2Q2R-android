@@ -46,7 +46,7 @@ public class Utils {
      * @param decodedQR The String parsed from a QR.
      * @return 'R' - registration QR
      *         'A' - authentication QR
-     *         '0' - invalid QR
+     *          0  - invalid QR
      */
     public static char identifyQRType(String decodedQR) {
 
@@ -86,13 +86,13 @@ public class Utils {
      * 2Q2R roughly follows U2F message format standards, but has no use for properties
      * such as a key handle. This method simply generates 16 random bytes (U2F specs
      * allow for variable length key handles).
-     * @return A Base64 representation of a 16 random bytes for use as a key handle.
+     * @return A web-safe-Base64 representation of a 16 random bytes for use as a key handle.
      */
     public static String genKeyID() {
 
         byte[] handle = new byte[16];
         new SecureRandom().nextBytes(handle);
-        return Base64.encodeToString(handle, Base64.DEFAULT);
+        return Base64.encodeToString(handle, Base64.URL_SAFE);
 
     }
 

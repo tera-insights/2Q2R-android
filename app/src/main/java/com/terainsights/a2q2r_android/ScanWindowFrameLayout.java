@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-package org.fedorahosted.freeotp;
+package com.terainsights.a2q2r_android;
 
 import android.content.Context;
 import android.util.AttributeSet;
