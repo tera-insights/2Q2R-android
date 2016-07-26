@@ -70,7 +70,7 @@ public class U2F {
      * Static cache for use by U2F state until it is safe to insert a new registration
      * into the database.
      */
-    private static HashMap<String, String> TEMP;
+    private static HashMap<String, String> TEMP = new HashMap<>();
 
     /**
      * GET call for server info.
@@ -137,17 +137,13 @@ public class U2F {
             String challenge = splitQR[2];
             String keyID = splitQR[3];
 
-            String infoURL = null;
+            String infoURL = km.getInfoURL(base64AppID);
 
-            try {
-                // TODO: fix all U2F state to use SQLite.
-                infoURL = "";
+            if (infoURL == null) {
 
-                System.out.println("The server registrations were cached as:");
-                System.out.println(km.serverRegs.toString(4));
+                Text.displayShort(ctx, R.string.corrupted_registrations_error);
+                return;
 
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
 
             Retrofit retro = new Retrofit.Builder()
@@ -164,7 +160,7 @@ public class U2F {
 
         } else {
 
-            Toast.makeText(ctx, ctx.getString(R.string.invalid_qr_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.invalid_qr_error);
 
         }
 
@@ -294,11 +290,11 @@ public class U2F {
 
             } else if (Build.VERSION.SDK_INT < 19) {
 
-                Toast.makeText(ctx, ctx.getString(R.string.outdated_device_error), Toast.LENGTH_LONG).show();
+                Text.displayShort(ctx, R.string.outdated_device_error);
 
             } else {
 
-                Toast.makeText(ctx, ctx.getString(R.string.key_gen_error), Toast.LENGTH_LONG).show();
+                Text.displayShort(ctx, R.string.key_gen_error);
 
             }
 
@@ -308,19 +304,19 @@ public class U2F {
             e.printStackTrace();
         } catch (CertificateException e) {
             e.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.key_gen_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.key_gen_error);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.key_gen_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.key_gen_error);
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.registration_gen_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.registration_gen_error);
         } catch (Utils.AuthExpiredException e) {
             e.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.auth_timeout_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.auth_timeout_error);
         } catch (KeyManager.UserAlreadyRegisteredException e) {
             e.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.existing_registration_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.existing_registration_error);
         }
 
     }
@@ -403,7 +399,7 @@ public class U2F {
         } catch (Exception e) {
 
             e.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.authentication_gen_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.authentication_gen_error);
 
         }
 
@@ -428,6 +424,8 @@ public class U2F {
 
             if (body != null) {
 
+                Text.displayShort(ctx, body);
+
                 String challenge = TEMP.get("challenge");
 
                 if (TEMP.get("type").equals("R")) {
@@ -449,7 +447,7 @@ public class U2F {
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.info_request_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.info_request_error);
         }
 
     }
@@ -486,13 +484,7 @@ public class U2F {
                             TEMP.get("userID")
                     );
 
-                    System.out.println("The registration was cached as:");
-                    System.out.println(km.serverRegs.toString(4));
-
                     km.saveRegistrations();
-
-                    System.out.println("The file was saved as:");
-                    printFile(km.file);
 
                 } catch (KeyManager.UserAlreadyRegisteredException e) {
                     e.printStackTrace();
@@ -504,14 +496,14 @@ public class U2F {
 
             }
 
-            Toast.makeText(ctx, body, Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, body);
 
         }
 
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.registration_request_error), Toast.LENGTH_LONG).show();
+            Text.displayShort(ctx, R.string.registration_request_error);
         }
 
     }
@@ -527,12 +519,13 @@ public class U2F {
 
             try {
 
-                Toast.makeText(ctx, response.body().string(), Toast.LENGTH_LONG).show();
+                Text.displayShort(ctx, response.body().string());
 
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (NullPointerException e) {
                 e.printStackTrace();
+                Text.displayShort(ctx, "Sorry, the server didn't reply.");
             }
 
         }
@@ -540,30 +533,7 @@ public class U2F {
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            Toast.makeText(ctx, ctx.getString(R.string.authentication_request_error), Toast.LENGTH_LONG).show();
-        }
-
-    }
-
-    /**
-     * Debug only.
-     */
-    public static void printFile(File f) {
-
-        try {
-
-            Scanner sc = new Scanner(f);
-
-            while (sc.hasNextLine()) {
-
-                System.out.println(sc.nextLine());
-
-            }
-
-        } catch (Exception e) {
-
-            System.out.println("File didn't exist!");
-
+            Text.displayShort(ctx, R.string.authentication_request_error);
         }
 
     }

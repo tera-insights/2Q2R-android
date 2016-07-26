@@ -111,8 +111,7 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         if (requestCode == SCAN_ACTION) {
 
             if (resultCode == RESULT_OK && data != null)
-                //U2F.process(data.getStringExtra("qr_content"), km, getApplicationContext());
-                Toast.makeText(this, data.getStringExtra("qr_content"), Toast.LENGTH_LONG).show();
+                U2F.process(data.getStringExtra("qr_content"), km, getApplicationContext());
             else
                 Toast.makeText(this, "Camera closed to save battery.", Toast.LENGTH_SHORT);
 
