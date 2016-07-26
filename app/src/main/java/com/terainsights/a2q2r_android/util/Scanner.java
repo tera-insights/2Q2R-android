@@ -2,6 +2,7 @@ package com.terainsights.a2q2r_android.util;
 
 import android.hardware.Camera;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;
@@ -25,35 +26,31 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class Scanner extends AsyncTask<Void, Void, String> implements Camera.PreviewCallback {
 
-    private class Data {
+    private static class Data {
         public byte[] data;
         Camera.Size   size;
     }
 
     private final BlockingQueue<Data> mBlockingQueue;
     private final Reader mReader;
-    private final long startTime;
-    private final long timeout;
 
-    public Scanner(int secondsUntilTimeout) {
+    public Scanner() {
 
-        mBlockingQueue = new LinkedBlockingQueue<Data>(5);
+        mBlockingQueue = new LinkedBlockingQueue<>(5);
         mReader = new QRCodeReader();
-
-        startTime = System.currentTimeMillis();
-        timeout = (long) secondsUntilTimeout * 1000;
 
     }
 
     @Override
     protected String doInBackground(Void... args) {
 
+        Log.i("Scanner", "Started scan thread.");
+        System.out.println("Apparently println() does work.");
+
         while (true) {
 
-            if (System.currentTimeMillis() - startTime >= timeout)
-                return null;
-
             try {
+                Log.i("Scanner", "Scanned for QR.");
                 Thread.currentThread().setName("Async Scan Task");
                 Data data = mBlockingQueue.take();
                 LuminanceSource ls = new PlanarYUVLuminanceSource(
@@ -77,6 +74,7 @@ public class Scanner extends AsyncTask<Void, Void, String> implements Camera.Pre
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
+        Log.i("Scanner", data.toString());
         Data d = new Data();
         d.data = data;
         d.size = camera.getParameters().getPreviewSize();

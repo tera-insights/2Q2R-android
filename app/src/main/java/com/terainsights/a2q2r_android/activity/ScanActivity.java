@@ -21,6 +21,7 @@
 package com.terainsights.a2q2r_android.activity;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.os.Bundle;
@@ -46,7 +47,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
     private Camera camera;
     private Scanner scanner;
-    private static String CAMERA = "CAMERA";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -54,11 +54,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.scan);
 
-        scanner = new Scanner(20) {
+        scanner = new Scanner() {
 
             @Override
             public void onPostExecute(String result) {
-                System.out.println("Read QR: " + result);
+                Log.i("ScanActivity", "Read QR: " + result);
                 onQRScanned(result);
             }
 
@@ -80,8 +80,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.i(CAMERA, "Surface created.");
-        surfaceDestroyed(holder);
+
+        Log.d("MainActivity", "Surface created.");
 
         try {
 
@@ -89,7 +89,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
             camera = Camera.open();
             camera.setPreviewDisplay(holder);
             camera.setPreviewCallback(scanner);
-            Log.i("CAMERA", "Connected QR scan task.");
+            scanner.execute();
+            System.out.println("Connected QR scan task.");
 
         } catch (NullPointerException e) {
 
@@ -133,6 +134,8 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 
+        System.out.println("Surface changed.");
+
         if (camera == null)
             return;
 
@@ -147,7 +150,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
 
-        System.out.println("Camera closed.");
+        System.out.println("Surface destroyed.");
 
         if (camera == null)
             return;
@@ -168,8 +171,9 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
         if (content != null) {
 
-            getIntent().putExtra("qr_content", content);
-            setResult(RESULT_OK, getIntent());
+            Intent intent = new Intent();
+            intent.putExtra("qr_content", content);
+            setResult(RESULT_OK, intent);
             finish();
 
         } else {
