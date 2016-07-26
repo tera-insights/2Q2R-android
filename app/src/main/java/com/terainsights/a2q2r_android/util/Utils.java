@@ -1,6 +1,5 @@
-package com.terainsights.a2q2r_android;
+package com.terainsights.a2q2r_android.util;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.os.Build;
 import android.security.KeyPairGeneratorSpec;
@@ -37,7 +36,7 @@ import javax.security.auth.x500.X500Principal;
  * >here</a>.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 6/13/16
+ * @version 7/22/16
  */
 public class Utils {
 
@@ -70,7 +69,7 @@ public class Utils {
             if (split.length != 4)
                 return 0;
 
-            if (Base64.decode(split[1], Base64.DEFAULT).length != 32)
+            if (Base64.decode(split[1], Base64.URL_SAFE).length != 32)
                 return 0;
 
             if (Base64.decode(split[2], Base64.URL_SAFE).length != 32)
@@ -83,16 +82,15 @@ public class Utils {
     }
 
     /**
-     * 2Q2R roughly follows U2F message format standards, but has no use for properties
-     * such as a key handle. This method simply generates 16 random bytes (U2F specs
-     * allow for variable length key handles).
+     * Generates cryptographically secure random bytes for use as a U2F key handle.
      * @return A web-safe-Base64 representation of a 16 random bytes for use as a key handle.
      */
     public static String genKeyID() {
 
         byte[] handle = new byte[16];
         new SecureRandom().nextBytes(handle);
-        return Base64.encodeToString(handle, Base64.URL_SAFE);
+
+        return Base64.encodeToString(handle, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
 
     }
 

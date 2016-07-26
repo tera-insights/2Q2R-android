@@ -1,4 +1,6 @@
-package com.terainsights.a2q2r_android;
+package com.terainsights.a2q2r_android.util;
+
+import android.support.annotation.NonNull;
 
 import org.json.JSONArray;
 import org.json.JSONException;

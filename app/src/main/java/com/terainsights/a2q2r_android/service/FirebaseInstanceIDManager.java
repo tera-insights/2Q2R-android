@@ -1,4 +1,4 @@
-package com.terainsights.a2q2r_android;
+package com.terainsights.a2q2r_android.service;
 
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.FirebaseInstanceIdService;
@@ -15,7 +15,8 @@ public class FirebaseInstanceIDManager extends FirebaseInstanceIdService {
     @Override
     public void onTokenRefresh() {
 
-        System.out.println(FirebaseInstanceId.getInstance().getToken());
+        // TODO: notify the server that the device's token has changed
+        System.out.println("New FCM token: " + FirebaseInstanceId.getInstance().getToken());
 
     }
 

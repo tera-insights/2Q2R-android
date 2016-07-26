@@ -1,27 +1,6 @@
-/*
- * FreeOTP
- *
- * Authors: Nathaniel McCallum <npmccallum@redhat.com>
- *
- * Copyright (C) 2013  Nathaniel McCallum, Red Hat
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package com.terainsights.a2q2r_android;
+package com.terainsights.a2q2r_android.util;
 
 import android.hardware.Camera;
-import android.hardware.Camera.PreviewCallback;
 import android.os.AsyncTask;
 
 import com.google.zxing.BinaryBitmap;
@@ -38,25 +17,42 @@ import com.google.zxing.qrcode.QRCodeReader;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class ScanAsyncTask extends AsyncTask<Void, Void, String> implements PreviewCallback {
-    private static class Data {
+/**
+ * An asynchronous task which scans a camera preview for QR codes.
+ *
+ * @author Sam Claus, Tera Insights, LLC
+ * @version 7/24/16
+ */
+public class Scanner extends AsyncTask<Void, Void, String> implements Camera.PreviewCallback {
+
+    private class Data {
         public byte[] data;
         Camera.Size   size;
     }
 
     private final BlockingQueue<Data> mBlockingQueue;
-    private final Reader              mReader;
-    private final QRScanHandler       mHandler;
+    private final Reader mReader;
+    private final long startTime;
+    private final long timeout;
 
-    public ScanAsyncTask(QRScanHandler handler) {
+    public Scanner(int secondsUntilTimeout) {
+
         mBlockingQueue = new LinkedBlockingQueue<Data>(5);
         mReader = new QRCodeReader();
-        mHandler = handler;
+
+        startTime = System.currentTimeMillis();
+        timeout = (long) secondsUntilTimeout * 1000;
+
     }
 
     @Override
     protected String doInBackground(Void... args) {
+
         while (true) {
+
+            if (System.currentTimeMillis() - startTime >= timeout)
+                return null;
+
             try {
                 Thread.currentThread().setName("Async Scan Task");
                 Data data = mBlockingQueue.take();
@@ -74,7 +70,9 @@ public class ScanAsyncTask extends AsyncTask<Void, Void, String> implements Prev
             } finally {
                 mReader.reset();
             }
+
         }
+
     }
 
     @Override
@@ -85,15 +83,4 @@ public class ScanAsyncTask extends AsyncTask<Void, Void, String> implements Prev
         mBlockingQueue.offer(d);
     }
 
-    @Override
-    protected void onPostExecute(String result) {
-
-        super.onPostExecute(result);
-        mHandler.handleQR(result);
-
-    }
-
-    interface QRScanHandler {
-        public void handleQR(String decodedQR);
-    }
 }

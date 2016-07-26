@@ -2,7 +2,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:orientation="vertical" >
+    android:orientation="vertical"
+    android:layout_weight=".8" >
 
     <TextView
         android:id="@+id/dialog_text"
@@ -18,7 +19,6 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:text="@string/okay"
-        style="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
+        android:text="@string/okay" />
 
 </RelativeLayout>

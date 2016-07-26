@@ -1,6 +1,7 @@
-package com.terainsights.a2q2r_android;
+package com.terainsights.a2q2r_android.service;
 
 import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -19,12 +20,10 @@ public class FirebaseMessageHandler extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage msg) {
 
-        System.out.println(msg.getData().get("authData"));
+        Intent intent = new Intent("firebase-notification");
+        intent.putExtra("notification", msg.getData().get("authData"));
 
-        Intent i = new Intent(getApplicationContext(), AboutActivity.class);
-        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        startActivity(i);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
     }
 

@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-package com.terainsights.a2q2r_android;
+package com.terainsights.a2q2r_android.activity;
 
 import android.app.Activity;
 import android.content.pm.PackageInfo;
@@ -28,6 +28,8 @@ import android.os.Bundle;
 import android.text.Html;
 import android.text.method.LinkMovementMethod;
 import android.widget.TextView;
+
+import com.terainsights.a2q2r_android.R;
 
 public class AboutActivity extends Activity {
     @Override
