@@ -6,8 +6,16 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.terainsights.a2q2r_android.R;
+import com.terainsights.a2q2r_android.util.KeyManager;
+import com.terainsights.a2q2r_android.util.U2F;
+
+import java.io.File;
+import java.io.IOException;
 
 public class FCMDialog extends Activity implements View.OnClickListener {
+
+    private String authData = null;
+    private KeyManager km;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -17,10 +25,24 @@ public class FCMDialog extends Activity implements View.OnClickListener {
 
         Bundle extras = getIntent().getExtras();
 
+        try {
+
+            File registrationsFile = new File(getFilesDir(), "registrations.json");
+            km = new KeyManager(registrationsFile, registrationsFile.createNewFile());
+
+        } catch (IOException e) {
+
+            finish();
+
+        }
+
         if (extras != null) {
 
-            ((TextView) findViewById(R.id.server_name)).setText(extras.getString("serverName"));
+            ((TextView) findViewById(R.id.server_name)).setText(extras.getString("serverName")
+                .replace('_', ' '));
             ((TextView) findViewById(R.id.server_url)).setText(extras.getString("serverURL"));
+
+            authData = extras.getString("authData");
 
         }
 
@@ -35,12 +57,11 @@ public class FCMDialog extends Activity implements View.OnClickListener {
         switch (v.getId()) {
 
             case R.id.okay_button:
-                setResult(RESULT_OK);
+                U2F.process(authData, km, getApplicationContext());
                 finish();
                 break;
 
             case R.id.cancel_button:
-                setResult(RESULT_CANCELED);
                 finish();
                 break;
 

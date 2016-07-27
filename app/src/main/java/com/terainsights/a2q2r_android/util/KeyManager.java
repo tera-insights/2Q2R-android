@@ -85,8 +85,8 @@ public class KeyManager {
      * @param appID The application ID of the server; unique for each server. This
      *              is also used as an index to access the proper registration data
      *              whenever the user authenticates their identity.
-     * @param infoURL URL containing standardized information on communication with
-     *                the server.
+     * @param baseURL The baseURL of the 2Q2R server to authenticate with.
+     * @param appName The human legible name of the server application.
      * @param keyID The handle for the key pair generated for the user registration.
      * @param userID The username of the registering account. Storing usernames on the
      *               phone ensures that the app can prevent the user from wastefully
@@ -94,15 +94,14 @@ public class KeyManager {
      * @throws UserAlreadyRegisteredException if the user already registered the device.
      * @throws JSONException if an error occurred while saving the registration.
      */
-    public void registerWithServer(String appID, String infoURL, String keyID, String userID)
-            throws UserAlreadyRegisteredException, JSONException {
+    public void registerWithServer(String appID, String baseURL, String appName, String keyID,
+            String userID) throws UserAlreadyRegisteredException, JSONException {
 
         JSONObject servers = serverRegs.getJSONObject("servers");
         JSONObject keys    = serverRegs.getJSONObject("keys");
 
         if (servers.has(appID)) {
 
-            servers.getJSONObject(appID).put("infoURL", infoURL);
             JSONArray users = servers.getJSONObject(appID).getJSONArray("users");
 
             if (users.toString().contains("\"" + userID + "\""))
@@ -113,7 +112,8 @@ public class KeyManager {
         } else {
 
             servers.put(appID, new JSONObject()
-                    .put("infoURL", infoURL)
+                    .put("baseURL", baseURL)
+                    .put("appName", appName.replace(' ', '_'))
                     .put("users", new JSONArray()
                             .put(userID)));
 
@@ -125,15 +125,34 @@ public class KeyManager {
     }
 
     /**
-     * Grabs the `infoURL` for a given server.
+     * Grabs the `baseURL` for a given server.
      * @param appID The Base64 server ID.
-     * @return The `infoURL` for the given server, or null if it wasn't found.
+     * @return The `baseURL` for the given server, or null if it wasn't found.
      */
-    public String getInfoURL(String appID) {
+    public String getBaseURL(String appID) {
 
         try {
 
-            return serverRegs.getJSONObject("servers").getJSONObject(appID).getString("infoURL");
+            return serverRegs.getJSONObject("servers").getJSONObject(appID).getString("baseURL");
+
+        } catch (JSONException e) {
+
+            return null;
+
+        }
+
+    }
+
+    /**
+     * Grabs the `appName` for a given server.
+     * @param appID The Base64 server ID.
+     * @return The `appName` for the given server, or null if it wasn't found.
+     */
+    public String getAppName(String appID) {
+
+        try {
+
+            return serverRegs.getJSONObject("servers").getJSONObject(appID).getString("appName");
 
         } catch (JSONException e) {
 

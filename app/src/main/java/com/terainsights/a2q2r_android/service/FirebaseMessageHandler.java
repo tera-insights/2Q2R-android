@@ -32,13 +32,15 @@ public class FirebaseMessageHandler extends FirebaseMessagingService {
 
             File registrationsFile = new File(getFilesDir(), "registrations.json");
             KeyManager km = new KeyManager(registrationsFile, registrationsFile.createNewFile());
+            String appID = msg.getData().get("authData").split(" ")[1];
 
-//            Intent intent = new Intent(getApplicationContext(), FCMDialog.class);
-//            intent.putExtra("serverName", "2Q2R Demo");
-//            intent.putExtra("serverURL", "https://2q2r.demo.com/");
-//            intent.putExtra("authData", msg.getData().get("authData"));
+            Intent intent = new Intent(getApplicationContext(), FCMDialog.class);
+            intent.putExtra("serverName", km.getAppName(appID));
+            intent.putExtra("serverURL", km.getBaseURL(appID));
+            intent.putExtra("authData", msg.getData().get("authData"));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-            U2F.process(msg.getData().get("authData"), km, getApplicationContext());
+            startActivity(intent);
 
         } catch (IOException e) {
 

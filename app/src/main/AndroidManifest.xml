@@ -29,9 +29,6 @@
         android:name="android.hardware.camera.autofocus"
         android:required="true" />
 
-    <android:uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <android:uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -46,11 +43,11 @@
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
         <activity
-            android:name=".dialog.AlertDialog"
+            android:name=".dialog.ConfirmDialog"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
         <activity
-            android:name=".dialog.ConfirmDialog"
+            android:name=".dialog.FCMDialog"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
         <activity
@@ -91,8 +88,6 @@
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
             </intent-filter>
         </service>
-
-        <activity android:name=".dialog.FCMDialog"></activity>
     </application>
 
 </manifest>

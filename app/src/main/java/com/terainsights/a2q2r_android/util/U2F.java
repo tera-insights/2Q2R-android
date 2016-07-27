@@ -1,10 +1,8 @@
 package com.terainsights.a2q2r_android.util;
 
 import android.content.Context;
-import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
-import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
@@ -12,13 +10,11 @@ import android.widget.Toast;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.jaredrummler.android.device.DeviceName;
 import com.terainsights.a2q2r_android.R;
-import com.terainsights.a2q2r_android.dialog.AlertDialog;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -30,8 +26,6 @@ import java.security.cert.CertificateException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECPoint;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
 
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
@@ -121,7 +115,6 @@ public class U2F {
                     .baseUrl(infoURL)
                     .build();
 
-            TEMP.put("type", "R");
             TEMP.put("challenge", challenge);
             TEMP.put("infoURL", infoURL);
             TEMP.put("userID", userID);
@@ -137,26 +130,12 @@ public class U2F {
             String challenge = splitQR[2];
             String keyID = splitQR[3];
 
-            String infoURL = km.getInfoURL(base64AppID);
+            String baseURL = km.getBaseURL(base64AppID);
 
-            if (infoURL == null) {
-
-                Text.displayShort(ctx, R.string.corrupted_registrations_error);
-                return;
-
-            }
-
-            Retrofit retro = new Retrofit.Builder()
-                    .baseUrl(infoURL)
-                    .build();
-
-            TEMP.put("type", "A");
-            TEMP.put("challenge", challenge);
-            TEMP.put("keyID", keyID);
-
-            U2F.ServerInfo info = retro.create(U2F.ServerInfo.class);
-            Call<ResponseBody> infoCall = info.getInfo();
-            infoCall.enqueue(new InformationCallback());
+            if (baseURL != null)
+                authenticate(challenge, keyID, base64AppID, baseURL);
+            else
+                Text.displayShort(ctx, R.string.registration_not_found_error);
 
         } else {
 
@@ -190,9 +169,6 @@ public class U2F {
 
             if (pubKey != null) {
 
-                System.out.println("Server registrations:");
-                System.out.println(km.serverRegs.toString(4));
-
                 JSONObject servers = km.serverRegs.getJSONObject("servers");
 
                 if (servers.has(info.getString("appID")) && servers
@@ -223,16 +199,17 @@ public class U2F {
 
                 //////////////////////////////////////////////////////////////
 
-                JSONObject clientData = new JSONObject()
+                String clientData = new JSONObject()
                         .put("typ", "navigator.id.finishEnrollment")
                         .put("challenge", challengeB64)
-                        .put("origin", info.getString("baseURL"));
+                        .put("origin", info.getString("baseURL"))
+                        .toString().replace("\\", "");
 
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
 
                 byte[] futureUse = {0x00};
                 byte[] appParam = md.digest(info.getString("appID").getBytes());
-                byte[] challenge = md.digest(clientData.toString().replace("\\", "").getBytes());
+                byte[] challenge = md.digest(clientData.getBytes());
                 byte[] keyHandle = Base64.decode(keyID, Base64.URL_SAFE);
                 byte[] publicKey = bytes.toByteArray();
 
@@ -267,6 +244,8 @@ public class U2F {
 
                 TEMP.put("appID", info.getString("appID"));
                 TEMP.put("keyID", keyID);
+                TEMP.put("appName", info.getString("appName"));
+                TEMP.put("baseURL", info.getString("baseURL"));
 
                 Log.i("MONITOR", "The keyID generated is: " + keyID);
 
@@ -332,18 +311,18 @@ public class U2F {
      * @param keyID        A web-safe-Base64-encoded handle of 16 bytes sent
      *                     from the server to identify the key it expects to
      *                     be used for authentication.
-     * @param serverInfo   Stringified JSON containing server details.
+     * @param appID        A web-safe-Base64 encoded server ID.
+     * @param baseURL      The base URL for the U2F authentication route.
      */
-    private static void authenticate(String challengeB64, String keyID, String serverInfo) {
+    private static void authenticate(String challengeB64, String keyID, String appID,
+                                     String baseURL) {
 
         try {
-
-            JSONObject info = new JSONObject(serverInfo);
 
             JSONObject clientData = new JSONObject()
                     .put("typ", "navigator.id.getAssertion")
                     .put("challenge", challengeB64)
-                    .put("origin", info.getString("baseURL"));
+                    .put("origin", baseURL);
 
             String serializedClientData = clientData.toString();
 
@@ -351,7 +330,7 @@ public class U2F {
 
             byte[] userPresence = {0b00000001};
             byte[] counter = km.getCounter(keyID);
-            byte[] appParam = md.digest(info.getString("appID").getBytes());
+            byte[] appParam = md.digest(appID.getBytes());
             byte[] challenge = md.digest(serializedClientData.getBytes());
 
             ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -385,7 +364,7 @@ public class U2F {
             RequestBody data = RequestBody.create(media, authData.toString());
 
             Retrofit retro = new Retrofit.Builder()
-                    .baseUrl(info.getString("baseURL"))
+                    .baseUrl(baseURL)
                     .build();
 
             System.out.println("Sending the authentication response...");
@@ -424,21 +403,11 @@ public class U2F {
 
             if (body != null) {
 
-                Text.displayShort(ctx, body);
+                System.out.println(body);
 
                 String challenge = TEMP.get("challenge");
-
-                if (TEMP.get("type").equals("R")) {
-
-                    String userID = TEMP.get("userID");
-                    register(challenge, body, userID);
-
-                } else if (TEMP.get("type").equals("A")) {
-
-                    String keyID = TEMP.get("keyID");
-                    authenticate(challenge, keyID, body);
-
-                }
+                String userID = TEMP.get("userID");
+                register(challenge, body, userID);
 
             }
 
@@ -479,7 +448,8 @@ public class U2F {
 
                     km.registerWithServer(
                             TEMP.get("appID"),
-                            TEMP.get("infoURL"),
+                            TEMP.get("baseURL"),
+                            TEMP.get("appName"),
                             TEMP.get("keyID"),
                             TEMP.get("userID")
                     );
