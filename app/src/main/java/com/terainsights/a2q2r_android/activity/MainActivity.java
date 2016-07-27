@@ -26,6 +26,13 @@ import com.terainsights.a2q2r_android.util.U2F;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * The entry point for the application. Consists of a ListView displaying all of the user's
+ * keys, as well as a FAB for scanning a QR, and a menu.
+ *
+ * @author Sam Claus, Tera Insights, LLC
+ * @version 7/26/16
+ */
 public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener {
 
     private static int SCAN_ACTION = 0;
@@ -121,6 +128,7 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
                 case RESULT_OK:
                     System.out.println("Keys have been cleared.");
+                    km.clearRegistrations();
                     break;
 
                 case RESULT_CANCELED:

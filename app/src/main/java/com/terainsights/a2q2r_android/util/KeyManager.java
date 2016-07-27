@@ -184,6 +184,27 @@ public class KeyManager {
     }
 
     /**
+     * Wipes all registrations in cache. `saveRegistrations()` must be
+     * called to preserve the changes.
+     */
+    public void clearRegistrations() {
+
+        try {
+
+            serverRegs.remove("servers");
+            serverRegs.remove("keys");
+            serverRegs.put("servers", new JSONObject());
+            serverRegs.put("keys", new JSONObject());
+
+        } catch (JSONException e) {
+
+            e.printStackTrace();
+
+        }
+
+    }
+
+    /**
      * Thrown if a user attempts to register twice on the same device.
      */
     static class UserAlreadyRegisteredException extends Exception {}

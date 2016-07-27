@@ -51,7 +51,7 @@ import retrofit2.http.POST;
  * resources.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/22/16
+ * @version 7/26/16
  */
 public class U2F {
 
