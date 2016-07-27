@@ -47,6 +47,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
     private Camera camera;
     private Scanner scanner;
+    private boolean scannerActive = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -78,6 +79,9 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
     }
 
 
+    /**
+     * Called when the activity is opened and the camera preview surface becomes visible.
+     */
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
 
@@ -89,8 +93,11 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
             camera = Camera.open();
             camera.setPreviewDisplay(holder);
             camera.setPreviewCallback(scanner);
-            scanner.execute();
-            System.out.println("Connected QR scan task.");
+
+            if (!scannerActive) {
+                scanner.execute();
+                scannerActive = true;
+            }
 
         } catch (NullPointerException e) {
 
@@ -134,8 +141,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 
-        System.out.println("Surface changed.");
-
         if (camera == null)
             return;
 
@@ -149,8 +154,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
      */
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-
-        System.out.println("Surface destroyed.");
 
         if (camera == null)
             return;
