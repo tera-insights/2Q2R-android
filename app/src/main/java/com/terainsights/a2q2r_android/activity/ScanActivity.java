@@ -180,7 +180,9 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
         } else {
 
-            setResult(RESULT_CANCELED);
+            Intent intent = new Intent();
+            intent.putExtra("canceled", true);
+            setResult(RESULT_CANCELED, intent);
             finish();
 
         }

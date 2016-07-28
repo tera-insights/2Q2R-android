@@ -6,9 +6,11 @@ import android.database.sqlite.SQLiteDatabase;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * A wrapper for {@link SQLiteDatabase}, containing convenience methods for
@@ -90,20 +92,31 @@ public class Database {
         if (!cursor.moveToFirst())
             return result;
 
+        String isoDate = cursor.getString(lastLoginIndex).split(" ")[0].replace('-', '/');
+        String isoTime = cursor.getString(lastLoginIndex).split(" ")[1];
+
+        isoDate = (isoDate.startsWith("0")) ? isoDate.substring(1) : isoDate;
+        isoTime = (isoTime.startsWith("0")) ? isoTime.substring(1) : isoTime;
+
         result.userIDs.add(cursor.getString(userIDIndex));
         result.appNames.add(cursor.getString(appNameIndex));
         result.baseURLs.add(cursor.getString(baseURLIndex));
-        result.dates.add(cursor.getString(lastLoginIndex).split(" ")[0].replace('-', '/'));
-        result.times.add(cursor.getString(lastLoginIndex).split(" ")[1]);
+        result.dates.add(isoDate.substring(isoDate.indexOf('/') + 1));
+        result.times.add(isoTime);
         result.counters.add(cursor.getInt(counterIndex));
 
         while (cursor.moveToNext()) {
 
+            isoDate = cursor.getString(lastLoginIndex).split(" ")[0].replace('-', '/');
+            isoTime = cursor.getString(lastLoginIndex).split(" ")[1];
+
+            isoDate = (isoDate.startsWith("0")) ? isoDate.substring(1) : isoDate;
+            isoTime = (isoTime.startsWith("0")) ? isoTime.substring(1) : isoTime;
             result.userIDs.add(cursor.getString(userIDIndex));
             result.appNames.add(cursor.getString(appNameIndex));
             result.baseURLs.add(cursor.getString(baseURLIndex));
-            result.dates.add(cursor.getString(lastLoginIndex).split(" ")[0].replace('-', '/'));
-            result.times.add(cursor.getString(lastLoginIndex).split(" ")[1]);
+            result.dates.add(isoDate.substring(isoDate.indexOf('/') + 1));
+            result.times.add(isoTime);
             result.counters.add(cursor.getInt(counterIndex));
 
         }
@@ -163,9 +176,9 @@ public class Database {
      */
     public void insertNewKey(String keyID, String appID, String userID) {
 
-        Date now = new Date();
-        String dtTm = now.getYear() + "-" + now.getMonth() + "-" + now.getDay() + " " +
-                now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm");
+        df.setTimeZone(TimeZone.getDefault());
+        String dtTm = df.format(new Date());
 
         database.execSQL("INSERT INTO keys VALUES ('" +
                          keyID  + "','" +

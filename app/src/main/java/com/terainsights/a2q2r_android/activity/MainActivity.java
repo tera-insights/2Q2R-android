@@ -139,9 +139,14 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
                 }
 
-            } else {
+            } else if (resultCode == RESULT_CANCELED) {
 
-                Text.displayShort(this, R.string.camera_closed);
+                try {
+
+                    if (data.getBooleanExtra("canceled", false))
+                        Text.displayShort(this, R.string.camera_closed);
+
+                } catch (NullPointerException e) {}
 
             }
 
