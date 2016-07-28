@@ -54,6 +54,18 @@ public class Database {
                               "baseURL TEXT NOT NULL," +
                               "appName TEXT NOT NULL)");
 
+        insertNewServerInfo("_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "http://10.20.146.247:8081/", "2Q2R Server Demo");
+
+        insertNewKey("afbabfjajbfjjajfa87bf28b", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "sam@tera.com");
+        insertNewKey("aufauajfnfaf89h3293f893g9fgf", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "alin@tera.com");
+        insertNewKey("x53j3x3j3j3jx3nhb3ub3uf", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "josh@tera.com");
+        insertNewKey("ffffffffffffffffff", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "joost@tera.com");
+        insertNewKey("qweqeqru33jfkekeekdke", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "chris@tera.com");
+        insertNewKey("xehfwheuf728f22f8f2", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "jess@tera.com");
+        insertNewKey("2df6g2f26db23d72d", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "tiffany@tera.com");
+        insertNewKey("782hfh827fh82fn82fn", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "jacob@tera.com");
+        insertNewKey("2fn928nf398gn348gn", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "jon@tera.com");
+
     }
 
     /**
@@ -64,19 +76,19 @@ public class Database {
     public KeyData getDisplayableKeyInformation() {
 
         KeyData result = new KeyData();
-        Cursor cursor  = database.rawQuery("SELECT userID, appName, baseURL, lastLogin, counter" +
-                                           "FROM keys, servers" +
-                                           "WHERE keys.appID = servers.appID" +
-                                           "ORDER BY lastLogin DEC", null);
+        Cursor cursor  = database.rawQuery("SELECT userID, appName, baseURL, lastUsed, counter " +
+                                           "FROM keys, servers " +
+                                           "WHERE keys.appID = servers.appID " +
+                                           "ORDER BY lastUsed DESC", null);
 
         int userIDIndex    = cursor.getColumnIndex("userID");
         int appNameIndex   = cursor.getColumnIndex("appName");
         int baseURLIndex   = cursor.getColumnIndex("baseURL");
-        int lastLoginIndex = cursor.getColumnIndex("lastLogin");
+        int lastLoginIndex = cursor.getColumnIndex("lastUsed");
         int counterIndex   = cursor.getColumnIndex("counter");
 
         if (!cursor.moveToFirst())
-            return null;
+            return result;
 
         result.userIDs.add(cursor.getString(userIDIndex));
         result.appNames.add(cursor.getString(appNameIndex));
@@ -129,9 +141,9 @@ public class Database {
 
         ServerInfo result = new ServerInfo();
 
-        Cursor cursor = database.rawQuery("SELECT baseURL, appName" +
-                                          "FROM servers" +
-                                          "WHERE appID = " + appID, null);
+        Cursor cursor = database.rawQuery("SELECT baseURL, appName " +
+                                          "FROM servers " +
+                                          "WHERE appID = '" + appID + "'", null);
 
         if (!cursor.moveToFirst())
             return null;
@@ -156,10 +168,10 @@ public class Database {
                 now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
 
         database.execSQL("INSERT INTO keys VALUES ('" +
-                         keyID  + "'," +
-                         appID  + "'," +
-                         0      + "'," +
-                         userID + "'," +
+                         keyID  + "','" +
+                         appID  + "','" +
+                         0      + "','" +
+                         userID + "','" +
                          dtTm   + "')");
 
     }
@@ -173,8 +185,8 @@ public class Database {
     public void insertNewServerInfo(String appID, String baseURL, String appName) {
 
         database.execSQL("INSERT INTO servers VALUES ('" +
-                         appID   + "'," +
-                         baseURL + "'," +
+                         appID   + "','" +
+                         baseURL + "','" +
                          appName + "')");
 
     }
@@ -195,5 +207,11 @@ public class Database {
         return cursor.getCount() > 0;
 
     }
+
+    /**
+     * Indicates that a registration operation is faulty because the device is already
+     * registered with the given account.
+     */
+    public static class UserAlreadyRegisteredException extends Exception {}
 
 }

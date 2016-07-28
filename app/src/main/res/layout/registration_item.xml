@@ -4,14 +4,22 @@
     android:layout_height="match_parent"
     android:padding="10dp">
 
+    <ImageView
+        android:id="@+id/server_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        />
+
     <TextView
         android:id="@+id/user_id"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
+        android:layout_toRightOf="@id/server_icon"
         android:singleLine="true"
-        android:textSize="16sp"
+        android:textSize="20sp"
+        android:textStyle="bold"
         />
 
     <TextView
@@ -30,9 +38,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/user_id"
-        android:layout_alignParentLeft="true"
+        android:layout_toRightOf="@id/server_icon"
         android:singleLine="true"
-        android:textSize="12sp"
+        android:textSize="14sp"
         />
 
     <TextView

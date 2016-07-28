@@ -25,6 +25,7 @@ import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
 
 import java.io.File;
+import java.util.ArrayList;
 
 /**
  * The entry point for the application. Consists of a ListView displaying all of the user's
@@ -44,11 +45,15 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        U2F.DATABASE = new Database(new File(getFilesDir(), "registrations.database"));
+        File f = new File(getFilesDir(), "registrations.database");
+        f.delete();
+
+        U2F.DATABASE = new Database(f);
         U2F.CTX      = getApplicationContext();
 
         ListView registrations = (ListView) findViewById(R.id.registrations_view);
         Database.KeyData data  = U2F.DATABASE.getDisplayableKeyInformation();
+        System.out.println(data == null);
         CustomArrayAdapter adapter = new CustomArrayAdapter(data);
         registrations.setAdapter(adapter);
 
@@ -108,15 +113,31 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
             if (resultCode == RESULT_OK && data != null) {
 
+                String qrContent = data.getStringExtra("qr_content");
                 Database.ServerInfo serverInfo = U2F.DATABASE
-                        .getServerInfo(data.getStringExtra("qr_content").split(" ")[1]);
+                        .getServerInfo(qrContent.split(" ")[1]);
 
-                Intent intent = new Intent(this, AuthDialog.class);
-                intent.putExtra("serverName", serverInfo.appName);
-                intent.putExtra("serverURL", serverInfo.baseURL);
-                intent.putExtra("authData", data.getStringExtra("qr_content"));
+                if (qrContent.startsWith("A")) {
 
-                startActivity(intent);
+                    if (serverInfo == null) {
+
+                        Text.displayShort(this, R.string.unknown_server_error);
+                        return;
+
+                    }
+
+                    Intent intent = new Intent(this, AuthDialog.class);
+                    intent.putExtra("serverName", serverInfo.appName);
+                    intent.putExtra("serverURL", serverInfo.baseURL);
+                    intent.putExtra("authData", data.getStringExtra("qr_content"));
+
+                    startActivity(intent);
+
+                } else {
+
+                    U2F.process(qrContent);
+
+                }
 
             } else {
 

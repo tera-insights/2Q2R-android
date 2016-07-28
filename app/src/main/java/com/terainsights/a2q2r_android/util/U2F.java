@@ -165,7 +165,7 @@ public class U2F {
             if (pubKey != null) {
 
                 if (DATABASE.checkUserAlreadyRegistered(userID, info.getString("appID")))
-                    throw new KeyManager.UserAlreadyRegisteredException();
+                    throw new Database.UserAlreadyRegisteredException();
 
                 KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
                 ks.load(null);
@@ -276,7 +276,7 @@ public class U2F {
         } catch (Utils.AuthExpiredException e) {
             e.printStackTrace();
             Text.displayShort(CTX, R.string.auth_timeout_error);
-        } catch (KeyManager.UserAlreadyRegisteredException e) {
+        } catch (Database.UserAlreadyRegisteredException e) {
             e.printStackTrace();
             Text.displayShort(CTX, R.string.existing_registration_error);
         }
