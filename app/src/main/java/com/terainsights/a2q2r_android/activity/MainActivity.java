@@ -37,7 +37,6 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
     private static int SCAN_ACTION = 0;
     private static int CLEAR_ACTION = 1;
-    private static int AUTH_ACTION = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,10 +128,6 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
             System.out.println("Keys have been cleared.");
             new File(getFilesDir(), "registrations.database").delete();
-
-        } else if (requestCode == AUTH_ACTION && resultCode == RESULT_OK) {
-
-
 
         }
 
