@@ -6,16 +6,21 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.terainsights.a2q2r_android.R;
-import com.terainsights.a2q2r_android.util.KeyManager;
 import com.terainsights.a2q2r_android.util.U2F;
 
 import java.io.File;
 import java.io.IOException;
 
-public class FCMDialog extends Activity implements View.OnClickListener {
+/**
+ * Controller for a simple authentication confirmation dialog which displays
+ * the server's name and 2Q2R domain.
+ *
+ * @author Sam Claus, Tera Insights, LLC
+ * @version 7/28/16
+ */
+public class AuthDialog extends Activity implements View.OnClickListener {
 
     private String authData = null;
-    private KeyManager km;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,17 +29,6 @@ public class FCMDialog extends Activity implements View.OnClickListener {
         setContentView(R.layout.fcm_auth);
 
         Bundle extras = getIntent().getExtras();
-
-        try {
-
-            File registrationsFile = new File(getFilesDir(), "registrations.json");
-            km = new KeyManager(registrationsFile, registrationsFile.createNewFile());
-
-        } catch (IOException e) {
-
-            finish();
-
-        }
 
         if (extras != null) {
 
@@ -57,7 +51,7 @@ public class FCMDialog extends Activity implements View.OnClickListener {
         switch (v.getId()) {
 
             case R.id.okay_button:
-                U2F.process(authData, km, getApplicationContext());
+                U2F.process(authData);
                 finish();
                 break;
 

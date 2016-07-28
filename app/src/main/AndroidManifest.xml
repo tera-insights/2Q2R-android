@@ -47,7 +47,7 @@
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
         <activity
-            android:name=".dialog.FCMDialog"
+            android:name=".dialog.AuthDialog"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
         <activity

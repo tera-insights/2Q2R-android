@@ -24,6 +24,7 @@
     <string name="error_attaching_camera">Failed to open camera preview.</string>
     <string name="error_no_perms">Camera access denied!</string>
     <string name="camera_required">You must allow camera access to scan QR codes.</string>
+    <string name="camera_closed">Camera closed to save battery.</string>
     <string name="fcm_confirm">Would you like to authenticate with the following server?</string>
 
     <string name="invalid_qr_error">The QR you have scanned is not a 2Q2R-compliant key.</string>

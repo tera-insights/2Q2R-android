@@ -2,7 +2,6 @@ package com.terainsights.a2q2r_android.activity;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -19,27 +18,26 @@ import com.karumi.dexter.Dexter;
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
 import com.karumi.dexter.listener.single.PermissionListener;
 import com.terainsights.a2q2r_android.R;
+import com.terainsights.a2q2r_android.dialog.AuthDialog;
 import com.terainsights.a2q2r_android.dialog.ConfirmDialog;
-import com.terainsights.a2q2r_android.util.KeyManager;
+import com.terainsights.a2q2r_android.util.Database;
+import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Date;
 
 /**
  * The entry point for the application. Consists of a ListView displaying all of the user's
  * keys, as well as a FAB for scanning a QR, and a menu.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/26/16
+ * @version 7/28/16
  */
 public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener {
 
     private static int SCAN_ACTION = 0;
     private static int CLEAR_ACTION = 1;
-
-    private KeyManager km;
+    private static int AUTH_ACTION = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,22 +45,13 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        try {
+        U2F.DATABASE = new Database(new File(getFilesDir(), "registrations.database"));
+        U2F.CTX      = getApplicationContext();
 
-            File registrationsFile = new File(getFilesDir(), "registrations.json");
-            km = new KeyManager(registrationsFile, registrationsFile.createNewFile());
-
-            String[] values = {"An account", "Another account", "A third account"};
-
-            ListView registrations = (ListView) findViewById(R.id.registrations_view);
-            CustomArrayAdapter adapter = new CustomArrayAdapter(this, values);
-            registrations.setAdapter(adapter);
-
-        } catch (IOException e) {
-
-            System.out.println("Could not read registrations file.");
-
-        }
+        ListView registrations = (ListView) findViewById(R.id.registrations_view);
+        Database.KeyData data  = U2F.DATABASE.getDisplayableKeyInformation();
+        CustomArrayAdapter adapter = new CustomArrayAdapter(data);
+        registrations.setAdapter(adapter);
 
         Dexter.initialize(getApplicationContext());
         PermissionListener listener = DialogOnDeniedPermissionListener.Builder
@@ -118,25 +107,32 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
         if (requestCode == SCAN_ACTION) {
 
-            if (resultCode == RESULT_OK && data != null)
-                U2F.process(data.getStringExtra("qr_content"), km, getApplicationContext());
-            else
-                Toast.makeText(this, "Camera closed to save battery.", Toast.LENGTH_SHORT);
+            if (resultCode == RESULT_OK && data != null) {
 
-        } else if (requestCode == CLEAR_ACTION) {
+                Database.ServerInfo serverInfo = U2F.DATABASE
+                        .getServerInfo(data.getStringExtra("qr_content").split(" ")[1]);
 
-            switch (resultCode) {
+                Intent intent = new Intent(this, AuthDialog.class);
+                intent.putExtra("serverName", serverInfo.appName);
+                intent.putExtra("serverURL", serverInfo.baseURL);
+                intent.putExtra("authData", data.getStringExtra("qr_content"));
 
-                case RESULT_OK:
-                    System.out.println("Keys have been cleared.");
-                    km.clearRegistrations();
-                    break;
+                startActivity(intent);
 
-                case RESULT_CANCELED:
-                    System.out.println("Keys were not cleared.");
-                    break;
+            } else {
+
+                Text.displayShort(this, R.string.camera_closed);
 
             }
+
+        } else if (requestCode == CLEAR_ACTION && resultCode == RESULT_OK) {
+
+            System.out.println("Keys have been cleared.");
+            new File(getFilesDir(), "registrations.database").delete();
+
+        } else if (requestCode == AUTH_ACTION && resultCode == RESULT_OK) {
+
+
 
         }
 
@@ -144,25 +140,25 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
     class CustomArrayAdapter extends ArrayAdapter<String> {
 
-        private final Context context;
-        private final String[] values;
+        private final Database.KeyData data;
 
-        public CustomArrayAdapter(Context context, String[] values) {
+        public CustomArrayAdapter(Database.KeyData data) {
 
-            super(context, -1, values);
-            this.context = context;
-            this.values = values;
+            super(getApplicationContext(), -1, data.userIDs);
+            this.data = data;
 
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(int pos, View convertView, ViewGroup parent) {
 
             LayoutInflater inflater = getLayoutInflater();
             View singleRow = inflater.inflate(R.layout.registration_item, parent, false);
 
-            TextView userID = (TextView) singleRow.findViewById(R.id.user_id);
-            userID.setText(values[position]);
+            ((TextView) singleRow.findViewById(R.id.user_id)).setText(data.userIDs.get(pos));
+            ((TextView) singleRow.findViewById(R.id.server_name)).setText(data.appNames.get(pos));
+            ((TextView) singleRow.findViewById(R.id.date_used)).setText(data.dates.get(pos));
+            ((TextView) singleRow.findViewById(R.id.time_used)).setText(data.times.get(pos));
 
             return singleRow;
 

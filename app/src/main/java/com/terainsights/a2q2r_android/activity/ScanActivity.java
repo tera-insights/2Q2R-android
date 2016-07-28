@@ -41,7 +41,7 @@ import java.util.List;
  * detected, the decoded data is fed into static U2F state.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/22/16
+ * @version 7/28/16
  */
 public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
@@ -55,7 +55,7 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.scan);
 
-        scanner = new Scanner() {
+        scanner = new Scanner(15) {
 
             @Override
             public void onPostExecute(String result) {
@@ -77,7 +77,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
         ((SurfaceView) findViewById(R.id.camera_preview)).getHolder().addCallback(this);
 
     }
-
 
     /**
      * Called when the activity is opened and the camera preview surface becomes visible.

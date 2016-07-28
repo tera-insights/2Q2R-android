@@ -1,7 +1,6 @@
 package com.terainsights.a2q2r_android.util;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
@@ -41,24 +40,23 @@ import retrofit2.http.POST;
 /**
  * Contains all of the static state needed to process a U2F challenge and talk to the
  * 2Q2R server. Should always be given the application context, rather than an individual
- * activity, because the `ctx` is used almost exclusively to open dialogs and access
+ * activity, because the {@code CTX} is used exclusively to open dialogs and access
  * resources.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/26/16
+ * @version 7/28/16
  */
 public class U2F {
 
     /**
      * Soon to be removed in favor of a SQLite database.
      */
-    private static KeyManager km;
-    private static Context ctx;
+    public static Context CTX;
 
     /**
      * The application's internal database containing key/server information.
      */
-    private static SQLiteDatabase database;
+    public static Database DATABASE;
 
     /**
      * Static cache for use by U2F state until it is safe to insert a new registration
@@ -96,10 +94,7 @@ public class U2F {
      *
      * @param qrContent The String extracted from a scanned QR.
      */
-    public static void process(String qrContent, KeyManager km, Context ctx) {
-
-        U2F.km = km;
-        U2F.ctx = ctx;
+    public static void process(String qrContent) {
 
         if (Utils.identifyQRType(qrContent) == 'R') {
 
@@ -130,16 +125,16 @@ public class U2F {
             String challenge = splitQR[2];
             String keyID = splitQR[3];
 
-            String baseURL = km.getBaseURL(base64AppID);
+            String baseURL = DATABASE.getServerInfo(base64AppID).baseURL;
 
             if (baseURL != null)
                 authenticate(challenge, keyID, base64AppID, baseURL);
             else
-                Text.displayShort(ctx, R.string.registration_not_found_error);
+                Text.displayShort(CTX, R.string.registration_not_found_error);
 
         } else {
 
-            Text.displayShort(ctx, R.string.invalid_qr_error);
+            Text.displayShort(CTX, R.string.invalid_qr_error);
 
         }
 
@@ -165,19 +160,12 @@ public class U2F {
 
             JSONObject info = new JSONObject(serverInfo);
             String keyID = Utils.genKeyID();
-            PublicKey pubKey = Utils.genKeys(keyID, ctx);
+            PublicKey pubKey = Utils.genKeys(keyID, CTX);
 
             if (pubKey != null) {
 
-                JSONObject servers = km.serverRegs.getJSONObject("servers");
-
-                if (servers.has(info.getString("appID")) && servers
-                        .getJSONObject(info.getString("appID")).getJSONArray("users")
-                        .toString().contains("\"" + userID + "\"")) {
-
+                if (DATABASE.checkUserAlreadyRegistered(userID, info.getString("appID")))
                     throw new KeyManager.UserAlreadyRegisteredException();
-
-                }
 
                 KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
                 ks.load(null);
@@ -269,33 +257,28 @@ public class U2F {
 
             } else if (Build.VERSION.SDK_INT < 19) {
 
-                Text.displayShort(ctx, R.string.outdated_device_error);
+                Text.displayShort(CTX, R.string.outdated_device_error);
 
             } else {
 
-                Text.displayShort(ctx, R.string.key_gen_error);
+                Text.displayShort(CTX, R.string.key_gen_error);
 
             }
 
-        } catch (JSONException e) {
+        } catch (JSONException | KeyStoreException e) {
             e.printStackTrace();
-        } catch (KeyStoreException e) {
+        } catch (CertificateException | NoSuchAlgorithmException e) {
             e.printStackTrace();
-        } catch (CertificateException e) {
-            e.printStackTrace();
-            Text.displayShort(ctx, R.string.key_gen_error);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            Text.displayShort(ctx, R.string.key_gen_error);
+            Text.displayShort(CTX, R.string.key_gen_error);
         } catch (IOException e) {
             e.printStackTrace();
-            Text.displayShort(ctx, R.string.registration_gen_error);
+            Text.displayShort(CTX, R.string.registration_gen_error);
         } catch (Utils.AuthExpiredException e) {
             e.printStackTrace();
-            Text.displayShort(ctx, R.string.auth_timeout_error);
+            Text.displayShort(CTX, R.string.auth_timeout_error);
         } catch (KeyManager.UserAlreadyRegisteredException e) {
             e.printStackTrace();
-            Text.displayShort(ctx, R.string.existing_registration_error);
+            Text.displayShort(CTX, R.string.existing_registration_error);
         }
 
     }
@@ -329,9 +312,9 @@ public class U2F {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
             byte[] userPresence = {0b00000001};
-            byte[] counter = km.getCounter(keyID);
-            byte[] appParam = md.digest(appID.getBytes());
-            byte[] challenge = md.digest(serializedClientData.getBytes());
+            byte[] counter      = DATABASE.getCounter(keyID);
+            byte[] appParam     = md.digest(appID.getBytes());
+            byte[] challenge    = md.digest(serializedClientData.getBytes());
 
             ByteArrayOutputStream os = new ByteArrayOutputStream();
 
@@ -351,7 +334,7 @@ public class U2F {
             byte[] signatureData = os.toByteArray();
 
             if (signatureData == null) {
-                Toast.makeText(ctx, ctx.getString(R.string.key_access_error), Toast.LENGTH_LONG).show();
+                Toast.makeText(CTX, CTX.getString(R.string.key_access_error), Toast.LENGTH_LONG).show();
                 return;
             }
 
@@ -378,7 +361,7 @@ public class U2F {
         } catch (Exception e) {
 
             e.printStackTrace();
-            Text.displayShort(ctx, R.string.authentication_gen_error);
+            Text.displayShort(CTX, R.string.authentication_gen_error);
 
         }
 
@@ -416,7 +399,7 @@ public class U2F {
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            Text.displayShort(ctx, R.string.info_request_error);
+            Text.displayShort(CTX, R.string.info_request_error);
         }
 
     }
@@ -434,46 +417,32 @@ public class U2F {
 
             try {
                 body = response.body().string();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (NullPointerException e) {
+            } catch (IOException | NullPointerException e) {
                 e.printStackTrace();
             }
 
             if (response.code() == 200) {
 
-                try {
+                System.out.println("Temp:\n" + TEMP.toString());
 
-                    System.out.println("Temp:\n" + TEMP.toString());
+                DATABASE.insertNewKey(TEMP.get("keyID"),
+                                      TEMP.get("appID"),
+                                      TEMP.get("userID"));
 
-                    km.registerWithServer(
-                            TEMP.get("appID"),
-                            TEMP.get("baseURL"),
-                            TEMP.get("appName"),
-                            TEMP.get("keyID"),
-                            TEMP.get("userID")
-                    );
-
-                    km.saveRegistrations();
-
-                } catch (KeyManager.UserAlreadyRegisteredException e) {
-                    e.printStackTrace();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                DATABASE.insertNewServerInfo(TEMP.get("appID"),
+                                             TEMP.get("baseURL"),
+                                             TEMP.get("appName"));
 
             }
 
-            Text.displayShort(ctx, body);
+            Text.displayShort(CTX, body);
 
         }
 
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            Text.displayShort(ctx, R.string.registration_request_error);
+            Text.displayShort(CTX, R.string.registration_request_error);
         }
 
     }
@@ -489,13 +458,13 @@ public class U2F {
 
             try {
 
-                Text.displayShort(ctx, response.body().string());
+                Text.displayShort(CTX, response.body().string());
 
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (NullPointerException e) {
                 e.printStackTrace();
-                Text.displayShort(ctx, "Sorry, the server didn't reply.");
+                Text.displayShort(CTX, "Sorry, the server didn't reply.");
             }
 
         }
@@ -503,7 +472,7 @@ public class U2F {
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             t.printStackTrace();
-            Text.displayShort(ctx, R.string.authentication_request_error);
+            Text.displayShort(CTX, R.string.authentication_request_error);
         }
 
     }

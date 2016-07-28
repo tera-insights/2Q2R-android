@@ -22,7 +22,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * An asynchronous task which scans a camera preview for QR codes.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/26/16
+ * @version 7/28/16
  */
 public class Scanner extends AsyncTask<Void, Void, String> implements Camera.PreviewCallback {
 
@@ -34,17 +34,23 @@ public class Scanner extends AsyncTask<Void, Void, String> implements Camera.Pre
     private final BlockingQueue<Data> mBlockingQueue;
     private final Reader mReader;
 
-    public Scanner() {
+    private final long start;
+    private final long timeout;
+
+    public Scanner(int secondsUntilTimeout) {
 
         mBlockingQueue = new LinkedBlockingQueue<>(5);
         mReader = new QRCodeReader();
+
+        start = System.currentTimeMillis();
+        timeout = (long) secondsUntilTimeout * 1000;
 
     }
 
     @Override
     protected String doInBackground(Void... args) {
 
-        while (true) {
+        while (System.currentTimeMillis() - start < timeout) {
 
             try {
                 Thread.currentThread().setName("Async Scan Task");
@@ -65,6 +71,8 @@ public class Scanner extends AsyncTask<Void, Void, String> implements Camera.Pre
             }
 
         }
+
+        return null;
 
     }
 
