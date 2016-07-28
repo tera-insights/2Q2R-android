@@ -8,9 +8,6 @@ import android.widget.TextView;
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.util.U2F;
 
-import java.io.File;
-import java.io.IOException;
-
 /**
  * Controller for a simple authentication confirmation dialog which displays
  * the server's name and 2Q2R domain.
@@ -26,7 +23,7 @@ public class AuthDialog extends Activity implements View.OnClickListener {
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.fcm_auth);
+        setContentView(R.layout.auth_dialog);
 
         Bundle extras = getIntent().getExtras();
 

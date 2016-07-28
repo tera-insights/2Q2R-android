@@ -24,7 +24,7 @@
         android:layout_marginRight="24dp"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:text="2Q2R Demo"
+        android:text="Server Name"
         />
 
     <TextView
@@ -36,7 +36,7 @@
         android:layout_marginRight="24dp"
         android:layout_marginBottom="24dp"
         android:textSize="18sp"
-        android:text="https://2q2r.demo.com/"
+        android:text="https://server.base.url/"
         />
 
     <LinearLayout
