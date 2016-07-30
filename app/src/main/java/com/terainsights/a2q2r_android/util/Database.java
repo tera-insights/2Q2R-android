@@ -4,12 +4,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.io.File;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 
 /**
@@ -21,19 +23,21 @@ import java.util.TimeZone;
  */
 public class Database {
 
-    public static class KeyData {
-        public ArrayList<String>  userIDs  = new ArrayList<>();
-        public ArrayList<String>  appNames = new ArrayList<>();
-        public ArrayList<String>  baseURLs = new ArrayList<>();
-        public ArrayList<String>  dates    = new ArrayList<>();
-        public ArrayList<String>  times    = new ArrayList<>();
-        public ArrayList<Integer> counters = new ArrayList<>();
+    public static class KeyDetails {
+        public String userID;
+        public String appName;
+        public String baseURL;
+        public String date;
+        public String time;
+        public int    counter;
     }
 
     public static class ServerInfo {
         public String appName;
         public String baseURL;
     }
+
+    private ArrayList<KeyRegistrationListener> listeners;
 
     private SQLiteDatabase database;
 
@@ -46,18 +50,20 @@ public class Database {
 
         this.database = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
         this.database.execSQL("CREATE TABLE IF NOT EXISTS keys(" +
-                              "keyID    TEXT     PRIMARY KEY NOT NULL," +
-                              "appID    TEXT     NOT NULL," +
-                              "counter  INT      NOT NULL," +
-                              "userID   TEXT     NOT NULL," +
-                              "lastUsed DATETIME NOT NULL)");
+                              "keyID    TEXT PRIMARY KEY NOT NULL," +
+                              "appID    TEXT NOT NULL," +
+                              "counter  INT  NOT NULL," +
+                              "userID   TEXT NOT NULL," +
+                              "lastUsed TEXT NOT NULL)");
         this.database.execSQL("CREATE TABLE IF NOT EXISTS servers(" +
                               "appID   TEXT PRIMARY KEY NOT NULL," +
                               "baseURL TEXT NOT NULL," +
                               "appName TEXT NOT NULL)");
 
-        insertNewServerInfo("_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "http://10.20.146.247:8081/", "2Q2R Server Demo");
+        this.listeners = new ArrayList<>();
 
+        // TODO: Remove dummy keys.
+        insertNewServerInfo("_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "http://10.20.146.247:8081/", "2Q2R Server Demo");
         insertNewKey("afbabfjajbfjjajfa87bf28b", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "sam@tera.com");
         insertNewKey("aufauajfnfaf89h3293f893g9fgf", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "alin@tera.com");
         insertNewKey("x53j3x3j3j3jx3nhb3ub3uf", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "josh@tera.com");
@@ -71,13 +77,24 @@ public class Database {
     }
 
     /**
+     * Sets another listener to be notified whenever a key is added.
+     * @param listener The listener to be notified.
+     */
+    public void addRegistrationListener(KeyRegistrationListener listener) {
+
+        listeners.add(listener);
+
+    }
+
+    /**
      * Returns data for every key stored on the phone in order of the time and date
      * the keys were last used.
-     * @return A structure with five ordered lists of key data.
+     * @return A list of KeyDetails containing information to display in a view.
      */
-    public KeyData getDisplayableKeyInformation() {
+    public ArrayList<KeyDetails> getDisplayableKeyInformation() {
 
-        KeyData result = new KeyData();
+        ArrayList<KeyDetails> result = new ArrayList<>();
+
         Cursor cursor  = database.rawQuery("SELECT userID, appName, baseURL, lastUsed, counter " +
                                            "FROM keys, servers " +
                                            "WHERE keys.appID = servers.appID " +
@@ -92,54 +109,66 @@ public class Database {
         if (!cursor.moveToFirst())
             return result;
 
-        String isoDate = cursor.getString(lastLoginIndex).split(" ")[0].replace('-', '/');
-        String isoTime = cursor.getString(lastLoginIndex).split(" ")[1];
-
-        isoDate = (isoDate.startsWith("0")) ? isoDate.substring(1) : isoDate;
-        isoTime = (isoTime.startsWith("0")) ? isoTime.substring(1) : isoTime;
-
-        result.userIDs.add(cursor.getString(userIDIndex));
-        result.appNames.add(cursor.getString(appNameIndex));
-        result.baseURLs.add(cursor.getString(baseURLIndex));
-        result.dates.add(isoDate.substring(isoDate.indexOf('/') + 1));
-        result.times.add(isoTime);
-        result.counters.add(cursor.getInt(counterIndex));
+        cursor.moveToPosition(-1);
 
         while (cursor.moveToNext()) {
 
-            isoDate = cursor.getString(lastLoginIndex).split(" ")[0].replace('-', '/');
-            isoTime = cursor.getString(lastLoginIndex).split(" ")[1];
+            KeyDetails kd = new KeyDetails();
 
+            String isoDate = cursor.getString(lastLoginIndex).split(" ")[0];
+            String isoTime = cursor.getString(lastLoginIndex).split(" ")[1];
             isoDate = (isoDate.startsWith("0")) ? isoDate.substring(1) : isoDate;
             isoTime = (isoTime.startsWith("0")) ? isoTime.substring(1) : isoTime;
-            result.userIDs.add(cursor.getString(userIDIndex));
-            result.appNames.add(cursor.getString(appNameIndex));
-            result.baseURLs.add(cursor.getString(baseURLIndex));
-            result.dates.add(isoDate.substring(isoDate.indexOf('/') + 1));
-            result.times.add(isoTime);
-            result.counters.add(cursor.getInt(counterIndex));
+
+            kd.userID  = cursor.getString(userIDIndex);
+            kd.appName = cursor.getString(appNameIndex);
+            kd.baseURL = cursor.getString(baseURLIndex);
+            kd.date    = isoDate.substring(isoDate.indexOf('/') + 1);
+            kd.time    = isoTime;
+            kd.counter = cursor.getInt(counterIndex);
+
+            result.add(kd);
 
         }
 
+        cursor.close();
         return result;
 
     }
 
     /**
-     * Retrieves and increments the counter for the given registration key.
+     * Retrieves the counter for the given registration key.
      * @param keyID The handle of the key in use.
      * @return The counter (pre-increment) for the given key.
      */
     public byte[] getCounter(String keyID) {
 
-        Cursor cursor = database.rawQuery("SELECT counter" +
-                                          "FROM keys" +
+        Cursor cursor = database.rawQuery("SELECT counter " +
+                                          "FROM keys " +
                                           "WHERE keyID = " + keyID, null);
         cursor.moveToFirst();
 
-        // TODO: Increment the counter.
+        int counter = cursor.getInt(cursor.getColumnIndex("counter"));
+        cursor.close();
 
-        return ByteBuffer.allocate(4).putInt(cursor.getInt(cursor.getColumnIndex("counter"))).array();
+        return ByteBuffer.allocate(4).putInt(counter).array();
+
+    }
+
+    /**
+     * Increments the counter for a given key. This should be called after
+     * a successful authentication request to the target 2Q2R server.
+     */
+    public void incrementCounter(String keyID) {
+
+        Cursor cursor = database.rawQuery("SELECT counter FROM keys WHERE keyID = " +
+                keyID, null);
+        cursor.moveToFirst();
+
+        database.execSQL("UPDATE keys SET counter = " + (cursor.getInt(0) + 1) +
+                " WHERE keyID = " + keyID);
+
+        cursor.close();
 
     }
 
@@ -169,14 +198,15 @@ public class Database {
     }
 
     /**
-     * Appends key data for a new registration to the database.
+     * Appends key data for a new registration to the database, and
+     * notifies all key registration listeners.
      * @param keyID  The registration key's U2F-compliant handle.
      * @param appID  The ID of the server the key is registered to.
      * @param userID The username of the account the key belongs to.
      */
     public void insertNewKey(String keyID, String appID, String userID) {
 
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm");
+        DateFormat df = new SimpleDateFormat("yyyy/MM/dd' 'HH:mm");
         df.setTimeZone(TimeZone.getDefault());
         String dtTm = df.format(new Date());
 
@@ -186,6 +216,49 @@ public class Database {
                          0      + "','" +
                          userID + "','" +
                          dtTm   + "')");
+
+        Cursor serverInfo = database.rawQuery("SELECT baseURL, appName " +
+                                              "FROM servers " +
+                                              "WHERE appID = '" + appID + "'", null);
+        serverInfo.moveToFirst();
+
+        for (String str: serverInfo.getColumnNames())
+            System.out.println(str);
+
+        KeyDetails kd = new KeyDetails();
+
+        String date = dtTm.substring(0, dtTm.indexOf(" "));
+        String time = dtTm.substring(dtTm.indexOf(" ") + 1);
+        date = (date.startsWith("0")) ? date.substring(1) : date;
+        time = (time.startsWith("0")) ? time.substring(1) : time;
+
+        kd.userID  = userID;
+        kd.appName = serverInfo.getString(serverInfo.getColumnIndex("appName"));
+        kd.baseURL = serverInfo.getString(serverInfo.getColumnIndex("baseURL"));
+        kd.counter = 0;
+        kd.date    = date;
+        kd.time    = time;
+
+        for (int i = 0; i < listeners.size(); i++)
+            listeners.get(i).notifyKeysUpdated(kd);
+
+    }
+
+    /**
+     * Checks to see if the device already has information cached for the
+     * given server.
+     * @param appID The server ID to look for.
+     * @return True if the server is already known, false otherwise.
+     */
+    public boolean containsServer(String appID) {
+
+        Cursor cursor = database.rawQuery("SELECT appID FROM servers WHERE appID = '" +
+                appID + "'", null);
+
+        boolean result = cursor.moveToFirst();
+        cursor.close();
+
+        return result;
 
     }
 
@@ -212,10 +285,11 @@ public class Database {
      */
     public boolean checkUserAlreadyRegistered(String userID, String appID) {
 
-        Cursor cursor = database.rawQuery("SELECT userID, appID" +
-                                          "FROM keys" +
-                                          "WHERE userID = '?' AND appID = '?'",
-                                          new String[]{userID, appID});
+        Cursor cursor = database.rawQuery("SELECT userID, appID " +
+                                          "FROM keys " +
+                                          "WHERE userID = '" + userID + "' " +
+                                          "AND appID = '" + appID + "'",
+                                          null);
 
         return cursor.getCount() > 0;
 
@@ -226,5 +300,18 @@ public class Database {
      * registered with the given account.
      */
     public static class UserAlreadyRegisteredException extends Exception {}
+
+    /**
+     * Notified whenever a new key is saved to the database.
+     */
+    public interface KeyRegistrationListener {
+
+        /**
+         * Called when a new is appended to the SQLite database.
+         * @param newKeyDesc A description of the new key added.
+         */
+        public void notifyKeysUpdated(KeyDetails newKeyDesc);
+
+    }
 
 }

@@ -24,6 +24,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECPoint;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import okhttp3.MediaType;
@@ -145,7 +146,7 @@ public class U2F {
      * generates a registration response which conforms exactly to the
      * specifications outlined in the U2F standard, and sends it to the
      * "/register" directory of the baseURL obtained from the relying
-     * party's `infoURL`.
+     * party's {@code infoURL}.
      *
      * @param challengeB64 A challenge provided by the server that the device is
      *                     being registered with [web-safe-Base64 of 32 bytes].
@@ -350,13 +351,11 @@ public class U2F {
                     .baseUrl(baseURL)
                     .build();
 
-            System.out.println("Sending the authentication response...");
+            TEMP.put("keyID", keyID);
 
             U2F.Authentication auth = retro.create(U2F.Authentication.class);
             Call<ResponseBody> authCall = auth.authenticate(data);
             authCall.enqueue(new AuthenticationCallback());
-
-            System.out.println("Sent.");
 
         } catch (Exception e) {
 
@@ -429,9 +428,10 @@ public class U2F {
                                       TEMP.get("appID"),
                                       TEMP.get("userID"));
 
-                DATABASE.insertNewServerInfo(TEMP.get("appID"),
-                                             TEMP.get("baseURL"),
-                                             TEMP.get("appName"));
+                if (!DATABASE.containsServer(TEMP.get("appID")))
+                    DATABASE.insertNewServerInfo(TEMP.get("appID"),
+                                                 TEMP.get("baseURL"),
+                                                 TEMP.get("appName"));
 
             }
 
@@ -457,6 +457,9 @@ public class U2F {
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
             try {
+
+                if (response.code() == 200)
+                    DATABASE.incrementCounter(TEMP.get("keyID"));
 
                 Text.displayShort(CTX, response.body().string());
 

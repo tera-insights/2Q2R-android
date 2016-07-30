@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24sp">
+
+    <TextView
+        android:id="@+id/user_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:textSize="24sp"
+        android:textStyle="italic"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="johndoe84"
+        />
+
+    <ImageView
+        android:id="@+id/app_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:minWidth="128dp"
+        android:maxWidth="128dp"
+        android:minHeight="128dp"
+        android:maxHeight="128dp"
+        android:src="@mipmap/key_icon"
+        />
+
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="Server Name"
+        />
+
+    <TextView
+        android:id="@+id/base_url"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:textSize="18sp"
+        android:textStyle="normal"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="http://a.server.url/"
+        />
+
+</LinearLayout>

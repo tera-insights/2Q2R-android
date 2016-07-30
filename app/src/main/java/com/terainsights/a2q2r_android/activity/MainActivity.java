@@ -2,6 +2,7 @@ package com.terainsights.a2q2r_android.activity;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -9,7 +10,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,6 +23,7 @@ import com.karumi.dexter.listener.single.PermissionListener;
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.dialog.AuthDialog;
 import com.terainsights.a2q2r_android.dialog.ConfirmDialog;
+import com.terainsights.a2q2r_android.dialog.KeyDescription;
 import com.terainsights.a2q2r_android.util.Database;
 import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
@@ -34,10 +38,13 @@ import java.util.ArrayList;
  * @author Sam Claus, Tera Insights, LLC
  * @version 7/28/16
  */
-public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener {
+public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener,
+        AdapterView.OnItemClickListener {
 
     private static int SCAN_ACTION = 0;
     private static int CLEAR_ACTION = 1;
+
+    private KeyAdapter keyDisplay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,10 +59,11 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         U2F.CTX      = getApplicationContext();
 
         ListView registrations = (ListView) findViewById(R.id.registrations_view);
-        Database.KeyData data  = U2F.DATABASE.getDisplayableKeyInformation();
-        System.out.println(data == null);
-        CustomArrayAdapter adapter = new CustomArrayAdapter(data);
-        registrations.setAdapter(adapter);
+        registrations.setOnItemClickListener(this);
+
+        keyDisplay = new KeyAdapter(U2F.DATABASE.getDisplayableKeyInformation());
+        U2F.DATABASE.addRegistrationListener(keyDisplay);
+        registrations.setAdapter(keyDisplay);
 
         Dexter.initialize(getApplicationContext());
         PermissionListener listener = DialogOnDeniedPermissionListener.Builder
@@ -159,29 +167,98 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
     }
 
-    class CustomArrayAdapter extends ArrayAdapter<String> {
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int pos, long id) {
 
-        private final Database.KeyData data;
+        Intent intent = new Intent(this, KeyDescription.class);
+        Database.KeyDetails key = keyDisplay.getItem(pos);
 
-        public CustomArrayAdapter(Database.KeyData data) {
+        intent.putExtra("userID", key.userID);
+        intent.putExtra("appName", key.appName);
+        intent.putExtra("baseURL", key.baseURL);
 
-            super(getApplicationContext(), -1, data.userIDs);
-            this.data = data;
+        startActivity(intent);
+
+    }
+
+    class KeyAdapter extends BaseAdapter implements Database.KeyRegistrationListener {
+
+        private ArrayList<Database.KeyDetails> keyInfo;
+
+        public KeyAdapter(ArrayList<Database.KeyDetails> keyInfo) {
+
+            this.keyInfo = keyInfo;
+
+        }
+
+        @Override
+        public int getCount() {
+
+            return keyInfo.size();
+
+        }
+
+        @Override
+        public Database.KeyDetails getItem(int position) {
+
+            return keyInfo.get(position);
+
+        }
+
+        @Override
+        public long getItemId(int position) {
+
+            return position;
 
         }
 
         @Override
         public View getView(int pos, View convertView, ViewGroup parent) {
 
-            LayoutInflater inflater = getLayoutInflater();
-            View singleRow = inflater.inflate(R.layout.registration_item, parent, false);
+            TextView userID;
+            TextView appName;
+            TextView date;
+            TextView time;
 
-            ((TextView) singleRow.findViewById(R.id.user_id)).setText(data.userIDs.get(pos));
-            ((TextView) singleRow.findViewById(R.id.server_name)).setText(data.appNames.get(pos));
-            ((TextView) singleRow.findViewById(R.id.date_used)).setText(data.dates.get(pos));
-            ((TextView) singleRow.findViewById(R.id.time_used)).setText(data.times.get(pos));
+            if (convertView == null) {
 
-            return singleRow;
+                convertView = getLayoutInflater().inflate(R.layout.registration_item, parent, false);
+
+                userID =  (TextView) convertView.findViewById(R.id.user_id);
+                appName = (TextView) convertView.findViewById(R.id.app_name);
+                date =    (TextView) convertView.findViewById(R.id.date_used);
+                time =    (TextView) convertView.findViewById(R.id.time_used);
+
+                convertView.setTag(R.id.user_id, userID);
+                convertView.setTag(R.id.app_name, appName);
+                convertView.setTag(R.id.date_used, date);
+                convertView.setTag(R.id.time_used, time);
+
+            } else {
+
+                userID =  (TextView) convertView.getTag(R.id.user_id);
+                appName = (TextView) convertView.getTag(R.id.app_name);
+                date =    (TextView) convertView.getTag(R.id.date_used);
+                time =    (TextView) convertView.getTag(R.id.time_used);
+
+            }
+
+            Database.KeyDetails key = getItem(pos);
+
+            userID.setText(key.userID);
+            appName.setText(key.appName);
+            date.setText(key.date);
+            time.setText(key.time);
+
+            return convertView;
+
+        }
+
+        @Override
+        public void notifyKeysUpdated(Database.KeyDetails newKeyDesc) {
+
+            keyInfo.add(newKeyDesc);
+            notifyDataSetChanged();
 
         }
 
