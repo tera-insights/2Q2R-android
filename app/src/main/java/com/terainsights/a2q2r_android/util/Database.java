@@ -62,18 +62,6 @@ public class Database {
 
         this.listeners = new ArrayList<>();
 
-        // TODO: Remove dummy keys.
-        insertNewServerInfo("_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "http://10.20.146.247:8081/", "2Q2R Server Demo");
-        insertNewKey("afbabfjajbfjjajfa87bf28b", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "sam@tera.com");
-        insertNewKey("aufauajfnfaf89h3293f893g9fgf", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "alin@tera.com");
-        insertNewKey("x53j3x3j3j3jx3nhb3ub3uf", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "josh@tera.com");
-        insertNewKey("ffffffffffffffffff", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "joost@tera.com");
-        insertNewKey("qweqeqru33jfkekeekdke", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "chris@tera.com");
-        insertNewKey("xehfwheuf728f22f8f2", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "jess@tera.com");
-        insertNewKey("2df6g2f26db23d72d", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "tiffany@tera.com");
-        insertNewKey("782hfh827fh82fn82fn", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "jacob@tera.com");
-        insertNewKey("2fn928nf398gn348gn", "_T-wi0wzr7GCi4vsfsXsUuKOfmiWLiHBVbmJJPidvhA", "jon@tera.com");
-
     }
 
     /**
@@ -161,12 +149,12 @@ public class Database {
      */
     public void incrementCounter(String keyID) {
 
-        Cursor cursor = database.rawQuery("SELECT counter FROM keys WHERE keyID = " +
-                keyID, null);
+        Cursor cursor = database.rawQuery("SELECT counter FROM keys WHERE keyID = '" +
+                keyID + "'", null);
         cursor.moveToFirst();
 
         database.execSQL("UPDATE keys SET counter = " + (cursor.getInt(0) + 1) +
-                " WHERE keyID = " + keyID);
+                " WHERE keyID = '" + keyID + "'");
 
         cursor.close();
 
@@ -199,7 +187,9 @@ public class Database {
 
     /**
      * Appends key data for a new registration to the database, and
-     * notifies all key registration listeners.
+     * notifies all key registration listeners. Should NOT be called
+     * unless the key's server has already been saved to the device
+     * using {@code insertNewServer()}.
      * @param keyID  The registration key's U2F-compliant handle.
      * @param appID  The ID of the server the key is registered to.
      * @param userID The username of the account the key belongs to.
@@ -268,7 +258,7 @@ public class Database {
      * @param baseURL The 2Q2R server domain.
      * @param appName The human legible application name.
      */
-    public void insertNewServerInfo(String appID, String baseURL, String appName) {
+    public void insertNewServer(String appID, String baseURL, String appName) {
 
         database.execSQL("INSERT INTO servers VALUES ('" +
                          appID   + "','" +
@@ -291,7 +281,10 @@ public class Database {
                                           "AND appID = '" + appID + "'",
                                           null);
 
-        return cursor.getCount() > 0;
+        boolean result = cursor.getCount() > 0;
+        cursor.close();
+
+        return result;
 
     }
 
@@ -310,7 +303,7 @@ public class Database {
          * Called when a new is appended to the SQLite database.
          * @param newKeyDesc A description of the new key added.
          */
-        public void notifyKeysUpdated(KeyDetails newKeyDesc);
+        void notifyKeysUpdated(KeyDetails newKeyDesc);
 
     }
 

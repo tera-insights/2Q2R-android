@@ -24,7 +24,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECPoint;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import okhttp3.MediaType;
@@ -422,16 +421,14 @@ public class U2F {
 
             if (response.code() == 200) {
 
-                System.out.println("Temp:\n" + TEMP.toString());
+                if (!DATABASE.containsServer(TEMP.get("appID")))
+                    DATABASE.insertNewServer(TEMP.get("appID"),
+                                             TEMP.get("baseURL"),
+                                             TEMP.get("appName"));
 
                 DATABASE.insertNewKey(TEMP.get("keyID"),
                                       TEMP.get("appID"),
                                       TEMP.get("userID"));
-
-                if (!DATABASE.containsServer(TEMP.get("appID")))
-                    DATABASE.insertNewServerInfo(TEMP.get("appID"),
-                                                 TEMP.get("baseURL"),
-                                                 TEMP.get("appName"));
 
             }
 
