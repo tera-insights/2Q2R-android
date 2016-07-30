@@ -145,7 +145,7 @@ public class Database {
 
         Cursor cursor = database.rawQuery("SELECT counter " +
                                           "FROM keys " +
-                                          "WHERE keyID = " + keyID, null);
+                                          "WHERE keyID = '" + keyID + "'", null);
         cursor.moveToFirst();
 
         int counter = cursor.getInt(cursor.getColumnIndex("counter"));
