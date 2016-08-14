@@ -59,7 +59,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
 
             @Override
             public void onPostExecute(String result) {
-                Log.i("ScanActivity", "Read QR: " + result);
                 onQRScanned(result);
             }
 
@@ -83,8 +82,6 @@ public class ScanActivity extends Activity implements SurfaceHolder.Callback {
      */
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-
-        Log.d("MainActivity", "Surface created.");
 
         try {
 
