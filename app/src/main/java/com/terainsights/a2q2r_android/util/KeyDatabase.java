@@ -4,14 +4,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.io.File;
-import java.lang.reflect.Array;
-import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.TimeZone;
 
 /**
@@ -19,26 +14,26 @@ import java.util.TimeZone;
  * querying a U2F-compliant database.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/28/16
+ * @version 8/19/16
  */
-public class Database {
+public class KeyDatabase {
 
-    public static class KeyDetails {
-        public String userID;
-        public String appName;
-        public String baseURL;
-        public String date;
-        public String time;
-        public int    counter;
-    }
-
+    /**
+     * Just a simple Tuple.
+     */
     public static class ServerInfo {
         public String appName;
         public String baseURL;
     }
 
-    private ArrayList<KeyRegistrationListener> listeners;
+    /**
+     * Feeds key data into the main activity's ListView.
+     */
+    public static KeyAdapter KEY_ADAPTER;
 
+    /**
+     * The core database being manipulated with key data.
+     */
     private SQLiteDatabase database;
 
     /**
@@ -46,7 +41,7 @@ public class Database {
      * database has the necessary 2Q2R tables.
      * @param databaseFile The file to create or open the database from.
      */
-    public Database(File databaseFile) {
+    public KeyDatabase(File databaseFile) {
 
         this.database = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
         this.database.execSQL("CREATE TABLE IF NOT EXISTS keys(" +
@@ -60,67 +55,19 @@ public class Database {
                               "baseURL TEXT NOT NULL," +
                               "appName TEXT NOT NULL)");
 
-        this.listeners = new ArrayList<>();
-
     }
 
     /**
-     * Sets another listener to be notified whenever a key is added.
-     * @param listener The listener to be notified.
+     * Updates the static U2F KeyAdapter with the latest key data.
      */
-    public void addRegistrationListener(KeyRegistrationListener listener) {
+    public void refreshKeyInfo() {
 
-        listeners.add(listener);
+        Cursor c = database.rawQuery("SELECT keyID _id, userID, appName, baseURL, lastUsed, counter " +
+                                 "FROM keys, servers " +
+                                 "WHERE keys.appID = servers.appID " +
+                                 "ORDER BY lastUsed DESC", null);
 
-    }
-
-    /**
-     * Returns data for every key stored on the phone in order of the time and date
-     * the keys were last used.
-     * @return A list of KeyDetails containing information to display in a view.
-     */
-    public ArrayList<KeyDetails> getDisplayableKeyInformation() {
-
-        ArrayList<KeyDetails> result = new ArrayList<>();
-
-        Cursor cursor  = database.rawQuery("SELECT userID, appName, baseURL, lastUsed, counter " +
-                                           "FROM keys, servers " +
-                                           "WHERE keys.appID = servers.appID " +
-                                           "ORDER BY lastUsed DESC", null);
-
-        int userIDIndex    = cursor.getColumnIndex("userID");
-        int appNameIndex   = cursor.getColumnIndex("appName");
-        int baseURLIndex   = cursor.getColumnIndex("baseURL");
-        int lastLoginIndex = cursor.getColumnIndex("lastUsed");
-        int counterIndex   = cursor.getColumnIndex("counter");
-
-        if (!cursor.moveToFirst())
-            return result;
-
-        cursor.moveToPosition(-1);
-
-        while (cursor.moveToNext()) {
-
-            KeyDetails kd = new KeyDetails();
-
-            String isoDate = cursor.getString(lastLoginIndex).split(" ")[0];
-            String isoTime = cursor.getString(lastLoginIndex).split(" ")[1];
-            isoDate = (isoDate.startsWith("0")) ? isoDate.substring(1) : isoDate;
-            isoTime = (isoTime.startsWith("0")) ? isoTime.substring(1) : isoTime;
-
-            kd.userID  = cursor.getString(userIDIndex);
-            kd.appName = cursor.getString(appNameIndex);
-            kd.baseURL = cursor.getString(baseURLIndex);
-            kd.date    = isoDate.substring(isoDate.indexOf('/') + 1);
-            kd.time    = isoTime;
-            kd.counter = cursor.getInt(counterIndex);
-
-            result.add(kd);
-
-        }
-
-        cursor.close();
-        return result;
+        KEY_ADAPTER.changeCursor(c);
 
     }
 
@@ -159,6 +106,8 @@ public class Database {
         database.execSQL("UPDATE keys SET counter = " + counter +
                 " WHERE keyID = '" + keyID + "'");
 
+        refreshKeyInfo();
+
     }
 
     /**
@@ -181,6 +130,8 @@ public class Database {
 
         result.baseURL = cursor.getString(cursor.getColumnIndex("baseURL"));
         result.appName = cursor.getString(cursor.getColumnIndex("appName"));
+
+        cursor.close();
 
         return result;
 
@@ -208,30 +159,22 @@ public class Database {
                          userID + "','" +
                          dtTm   + "')");
 
-        Cursor serverInfo = database.rawQuery("SELECT baseURL, appName " +
-                                              "FROM servers " +
-                                              "WHERE appID = '" + appID + "'", null);
-        serverInfo.moveToFirst();
+        refreshKeyInfo();
 
-        for (String str: serverInfo.getColumnNames())
-            System.out.println(str);
+    }
 
-        KeyDetails kd = new KeyDetails();
+    /**
+     * Appends information for a new server to the database.
+     * @param appID   The U2F server ID.
+     * @param baseURL The 2Q2R server domain.
+     * @param appName The human legible application name.
+     */
+    public void insertNewServer(String appID, String baseURL, String appName) {
 
-        String date = dtTm.substring(0, dtTm.indexOf(" "));
-        String time = dtTm.substring(dtTm.indexOf(" ") + 1);
-        date = (date.startsWith("0")) ? date.substring(1) : date;
-        time = (time.startsWith("0")) ? time.substring(1) : time;
-
-        kd.userID  = userID;
-        kd.appName = serverInfo.getString(serverInfo.getColumnIndex("appName"));
-        kd.baseURL = serverInfo.getString(serverInfo.getColumnIndex("baseURL"));
-        kd.counter = 0;
-        kd.date    = date;
-        kd.time    = time;
-
-        for (int i = 0; i < listeners.size(); i++)
-            listeners.get(i).notifyKeysUpdated(kd);
+        database.execSQL("INSERT INTO servers VALUES ('" +
+                appID   + "','" +
+                baseURL + "','" +
+                appName + "')");
 
     }
 
@@ -271,21 +214,6 @@ public class Database {
     }
 
     /**
-     * Appends information for a new server to the database.
-     * @param appID   The U2F server ID.
-     * @param baseURL The 2Q2R server domain.
-     * @param appName The human legible application name.
-     */
-    public void insertNewServer(String appID, String baseURL, String appName) {
-
-        database.execSQL("INSERT INTO servers VALUES ('" +
-                         appID   + "','" +
-                         baseURL + "','" +
-                         appName + "')");
-
-    }
-
-    /**
      * Checks if the phone is already registered with the given account
      * @param userID The username of the account to check.
      * @param appID  The ID of the account's server.
@@ -314,8 +242,7 @@ public class Database {
         database.execSQL("DELETE FROM keys");
         database.execSQL("DELETE FROM servers");
 
-        for (int i = 0; i < listeners.size(); i++)
-            listeners.get(i).notifyKeysUpdated(null);
+        refreshKeyInfo();
 
     }
 
@@ -324,18 +251,5 @@ public class Database {
      * registered with the given account.
      */
     public static class UserAlreadyRegisteredException extends Exception {}
-
-    /**
-     * Notified whenever a new key is saved to the database.
-     */
-    public interface KeyRegistrationListener {
-
-        /**
-         * Called when a new is appended to the SQLite database.
-         * @param newKeyDesc A description of the new key added.
-         */
-        void notifyKeysUpdated(KeyDetails newKeyDesc);
-
-    }
 
 }

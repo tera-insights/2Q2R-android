@@ -6,7 +6,7 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.dialog.AuthDialog;
-import com.terainsights.a2q2r_android.util.Database;
+import com.terainsights.a2q2r_android.util.KeyDatabase;
 import com.terainsights.a2q2r_android.util.U2F;
 
 import java.io.File;
@@ -32,11 +32,11 @@ public class FirebaseMessageHandler extends FirebaseMessagingService {
 
         try {
 
-            U2F.DATABASE = new Database(new File(getFilesDir(), "registrations.database"));
+            U2F.DATABASE = new KeyDatabase(new File(getFilesDir(), "registrations.database"));
             U2F.CTX = getApplicationContext();
 
             String qrContent = msg.getData().get("authData");
-            Database.ServerInfo serverInfo = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]);
+            KeyDatabase.ServerInfo serverInfo = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]);
 
             String[] split = qrContent.split(" ");
 

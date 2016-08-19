@@ -70,7 +70,8 @@
         android:layout_margin="24dp"
         android:singleLine="true"
         android:textSize="28sp"
-        android:textStyle="bold|italic"
+        android:textStyle="bold"
+        android:fontFamily="courier-new"
         />
 
     <LinearLayout

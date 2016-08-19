@@ -40,8 +40,9 @@ public class AuthDialog extends Activity implements View.OnClickListener {
             authData = extras.getString("authData");
             int missed = extras.getInt("missed");
 
-            ((TextView) findViewById(R.id.challenge_excerpt)).setText(authData.split(" ")[2]
-                    .substring(0, 4));
+            String challenge = authData.split(" ")[2];
+            ((TextView) findViewById(R.id.challenge_excerpt)).setText(challenge.substring(0, 4) +
+                    "    " + challenge.substring(4, 8));
 
             if (missed > 0) {
 

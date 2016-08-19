@@ -37,7 +37,7 @@ import javax.security.auth.x500.X500Principal;
  * >here</a>.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/22/16
+ * @version 8/19/16
  */
 public class Utils {
 

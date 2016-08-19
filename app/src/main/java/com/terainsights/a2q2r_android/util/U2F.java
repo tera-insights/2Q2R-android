@@ -56,7 +56,7 @@ public class U2F {
     /**
      * The application's internal database containing key/server information.
      */
-    public static Database DATABASE;
+    public static KeyDatabase DATABASE;
 
     /**
      * Static cache for use by U2F state until it is safe to insert a new registration
@@ -167,7 +167,7 @@ public class U2F {
             if (pubKey != null) {
 
                 if (DATABASE.checkUserAlreadyRegistered(userID, info.getString("appID")))
-                    throw new Database.UserAlreadyRegisteredException();
+                    throw new KeyDatabase.UserAlreadyRegisteredException();
 
                 KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
                 ks.load(null);
@@ -279,7 +279,7 @@ public class U2F {
         } catch (Utils.AuthExpiredException e) {
             e.printStackTrace();
             Text.displayShort(CTX, R.string.auth_timeout_error);
-        } catch (Database.UserAlreadyRegisteredException e) {
+        } catch (KeyDatabase.UserAlreadyRegisteredException e) {
             e.printStackTrace();
             Text.displayShort(CTX, R.string.existing_registration_error);
         }
