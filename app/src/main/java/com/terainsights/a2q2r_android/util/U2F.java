@@ -387,6 +387,7 @@ public class U2F {
 
             if (body != null) {
 
+                System.out.println(body);
                 String challenge = TEMP.get("challenge");
                 String userID = TEMP.get("userID");
                 register(challenge, body, userID);

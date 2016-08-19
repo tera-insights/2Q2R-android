@@ -22,7 +22,9 @@ import java.io.File;
 public class FirebaseMessageHandler extends FirebaseMessagingService {
 
     /**
-     * Called whenever a notification hits the phone.
+     * Called whenever a notification hits the phone. Reads through the
+     * message contents and displays info to the user, requesting permission
+     * before beginning authentication.
      * @param msg The Firebase notification.
      */
     @Override
