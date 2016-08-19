@@ -39,6 +39,19 @@
         android:text="https://server.base.url/"
         />
 
+    <TextView
+        android:id="@+id/counter_warning"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginLeft="24dp"
+        android:layout_marginRight="24dp"
+        android:layout_marginBottom="24dp"
+        android:textSize="16sp"
+        android:textColor="@android:color/holo_blue_light"
+        android:visibility="gone"
+        />
+
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"

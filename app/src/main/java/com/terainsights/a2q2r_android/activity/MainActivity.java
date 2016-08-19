@@ -2,9 +2,12 @@ package com.terainsights.a2q2r_android.activity;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,8 +30,10 @@ import com.terainsights.a2q2r_android.dialog.KeyDescription;
 import com.terainsights.a2q2r_android.util.Database;
 import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
+import com.terainsights.a2q2r_android.util.Utils;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 /**
@@ -36,7 +41,7 @@ import java.util.ArrayList;
  * keys, as well as a FAB for scanning a QR, and a menu.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/28/16
+ * @version 8/19/16
  */
 public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener,
         AdapterView.OnItemClickListener {
@@ -44,6 +49,7 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
     private static int SCAN_ACTION = 0;
     private static int CLEAR_ACTION = 1;
 
+    private ListView registrations;
     private KeyAdapter keyDisplay;
 
     @Override
@@ -53,12 +59,11 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         setContentView(R.layout.main);
 
         File f = new File(getFilesDir(), "registrations.database");
-        f.delete();
 
         U2F.DATABASE = new Database(f);
         U2F.CTX      = getApplicationContext();
 
-        ListView registrations = (ListView) findViewById(R.id.registrations_view);
+        registrations = (ListView) findViewById(R.id.registrations_view);
         registrations.setOnItemClickListener(this);
 
         keyDisplay = new KeyAdapter(U2F.DATABASE.getDisplayableKeyInformation());
@@ -122,10 +127,11 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
             if (resultCode == RESULT_OK && data != null) {
 
                 String qrContent = data.getStringExtra("qr_content");
-                Database.ServerInfo serverInfo = U2F.DATABASE
-                        .getServerInfo(qrContent.split(" ")[1]);
 
-                if (qrContent.startsWith("A")) {
+                if (Utils.identifyQRType(qrContent) == 'A') {
+
+                    Database.ServerInfo serverInfo = U2F.DATABASE
+                            .getServerInfo(qrContent.split(" ")[1]);
 
                     if (serverInfo == null) {
 
@@ -134,10 +140,23 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
                     }
 
+                    String[] split = qrContent.split(" ");
+                    int serverCounter = Integer.parseInt(split[4]);
+                    int deviceCounter = U2F.DATABASE.getCounter(split[3]);
+                    int difference = serverCounter - deviceCounter;
+
+                    if (difference < 1) {
+
+                        Text.displayLong(this, R.string.bad_counter_error);
+                        return;
+
+                    }
+
                     Intent intent = new Intent(this, AuthDialog.class);
                     intent.putExtra("serverName", serverInfo.appName);
                     intent.putExtra("serverURL", serverInfo.baseURL);
                     intent.putExtra("authData", data.getStringExtra("qr_content"));
+                    intent.putExtra("missed", difference - 1);
 
                     startActivity(intent);
 
@@ -161,7 +180,7 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         } else if (requestCode == CLEAR_ACTION && resultCode == RESULT_OK) {
 
             System.out.println("Keys have been cleared.");
-            new File(getFilesDir(), "registrations.database").delete();
+            U2F.DATABASE.clear();
 
         }
 
@@ -257,8 +276,17 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         @Override
         public void notifyKeysUpdated(Database.KeyDetails newKeyDesc) {
 
-            keyInfo.add(newKeyDesc);
-            notifyDataSetChanged();
+            if (newKeyDesc == null) {
+
+                keyInfo.clear();
+                notifyDataSetChanged();
+
+            } else{
+
+                keyInfo.add(newKeyDesc);
+                notifyDataSetChanged();
+
+            }
 
         }
 

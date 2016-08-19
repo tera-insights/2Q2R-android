@@ -29,6 +29,7 @@
 
     <string name="invalid_qr_error">The QR you have scanned is not a 2Q2R-compliant key.</string>
     <string name="unknown_server_error">Sorry, but you are not registered with this server.</string>
+    <string name="unknown_firebase_error">An authentication request was just received from an unknown server. Perhaps you deleted your key.</string>
     <string name="registration_not_found_error">Sorry, but you do not appear to be registered with this account.</string>
     <string name="corrupted_registrations_error">The registrations for this device are corrupted! Would you like to manually edit the file, or delete it?</string>
     <string name="outdated_device_error">Your device is outdated. Please upgrade to Android 4.4 (KitKat) or newer.</string>
@@ -42,4 +43,5 @@
     <string name="info_request_error">There was an error while retrieving info from the server.</string>
     <string name="registration_request_error">There was an error while sending the registration to the server.</string>
     <string name="authentication_request_error">There was an error while sending the authentication to the server.</string>
+    <string name="bad_counter_error">You just received an expired authentication attempt! This could mean a third party is trying to use your key to verify themselves!</string>
 </resources>

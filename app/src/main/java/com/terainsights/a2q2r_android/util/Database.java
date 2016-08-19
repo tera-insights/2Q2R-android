@@ -127,36 +127,37 @@ public class Database {
     /**
      * Retrieves the counter for the given registration key.
      * @param keyID The handle of the key in use.
-     * @return The counter (pre-increment) for the given key.
+     * @return The counter (pre-increment) for the given key, or -1 if no such
+     *         counter was found.
      */
-    public byte[] getCounter(String keyID) {
+    public int getCounter(String keyID) {
 
         Cursor cursor = database.rawQuery("SELECT counter " +
                                           "FROM keys " +
                                           "WHERE keyID = '" + keyID + "'", null);
-        cursor.moveToFirst();
+
+        if (!cursor.moveToFirst()) {
+            cursor.close();
+            return -1;
+        }
 
         int counter = cursor.getInt(cursor.getColumnIndex("counter"));
         cursor.close();
 
-        return ByteBuffer.allocate(4).putInt(counter).array();
+        return counter;
 
     }
 
     /**
      * Increments the counter for a given key. This should be called after
      * a successful authentication request to the target 2Q2R server.
+     *
+     * @param keyID The key to
      */
-    public void incrementCounter(String keyID) {
+    public void setCounter(String keyID, String counter) {
 
-        Cursor cursor = database.rawQuery("SELECT counter FROM keys WHERE keyID = '" +
-                keyID + "'", null);
-        cursor.moveToFirst();
-
-        database.execSQL("UPDATE keys SET counter = " + (cursor.getInt(0) + 1) +
+        database.execSQL("UPDATE keys SET counter = " + counter +
                 " WHERE keyID = '" + keyID + "'");
-
-        cursor.close();
 
     }
 
@@ -235,12 +236,29 @@ public class Database {
     }
 
     /**
+     * Checks to see if the device has the given registration key.
+     * @param keyID The handle for the key to check for.
+     * @return True if the key is present, false otherwise.
+     */
+    public boolean hasKey(String keyID) {
+
+        Cursor cursor = database.rawQuery("SELECT keyID FROM keys WHERE keyID = '" +
+                keyID + "'", null);
+
+        boolean result = cursor.moveToFirst();
+        cursor.close();
+
+        return result;
+
+    }
+
+    /**
      * Checks to see if the device already has information cached for the
      * given server.
      * @param appID The server ID to look for.
      * @return True if the server is already known, false otherwise.
      */
-    public boolean containsServer(String appID) {
+    public boolean hasServer(String appID) {
 
         Cursor cursor = database.rawQuery("SELECT appID FROM servers WHERE appID = '" +
                 appID + "'", null);
@@ -285,6 +303,19 @@ public class Database {
         cursor.close();
 
         return result;
+
+    }
+
+    /**
+     * Completely wipes the 2Q2R database by clearing "servers" and "keys".
+     */
+    public void clear() {
+
+        database.execSQL("DELETE FROM keys");
+        database.execSQL("DELETE FROM servers");
+
+        for (int i = 0; i < listeners.size(); i++)
+            listeners.get(i).notifyKeysUpdated(null);
 
     }
 

@@ -10,6 +10,7 @@ import android.util.Base64;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPairGenerator;
@@ -66,7 +67,7 @@ public class Utils {
 
         } else if (split[0].equals("A")) {
 
-            if (split.length != 4)
+            if (split.length != 5)
                 return 0;
 
             if (Base64.decode(split[1], Base64.URL_SAFE).length != 32)
@@ -74,6 +75,12 @@ public class Utils {
 
             if (Base64.decode(split[2], Base64.URL_SAFE).length != 32)
                 return 0;
+
+            try {
+                Integer.parseInt(split[4]);
+            } catch (Exception e) {
+                return 0;
+            }
 
             return 'A';
 
@@ -225,6 +232,18 @@ public class Utils {
         }
 
         return null;
+
+    }
+
+    /**
+     * Converts an integer to an array of 4 bytes, for convenience when dealing
+     * with U2F counters.
+     * @param counter The integer counter.
+     * @return A big-endian 4-byte array representation of the counter.
+     */
+    public static byte[] toByteArray(int counter) {
+
+        return ByteBuffer.allocate(4).putInt(counter).array();
 
     }
 

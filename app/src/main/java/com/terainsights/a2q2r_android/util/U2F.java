@@ -125,6 +125,8 @@ public class U2F {
             String challenge = splitQR[2];
             String keyID = splitQR[3];
 
+            TEMP.put("serverCounter", splitQR[4]);
+
             String baseURL = DATABASE.getServerInfo(base64AppID).baseURL;
 
             if (baseURL != null)
@@ -238,6 +240,7 @@ public class U2F {
                 Log.i("MONITOR", "The keyID generated is: " + keyID);
 
                 JSONObject registrationData = new JSONObject()
+                        .put("type", "2q2r")
                         .put("deviceName", DeviceName.getDeviceName())
                         .put("fcmToken", FirebaseInstanceId.getInstance().getToken())
                         .put("clientData", clientData)
@@ -312,7 +315,7 @@ public class U2F {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
             byte[] userPresence = {0b00000001};
-            byte[] counter      = DATABASE.getCounter(keyID);
+            byte[] counter      = Utils.toByteArray(Integer.parseInt(TEMP.get("serverCounter")));
             byte[] appParam     = md.digest(appID.getBytes());
             byte[] challenge    = md.digest(serializedClientData.getBytes());
 
@@ -367,7 +370,7 @@ public class U2F {
 
     /**
      * Describes what the activity should do once information has either been
-     * loaded from the server, or once the atTEMPt failed.
+     * loaded from the server, or once the attempt failed.
      */
     private static class InformationCallback implements Callback<ResponseBody> {
 
@@ -419,7 +422,7 @@ public class U2F {
 
             if (response.code() == 200) {
 
-                if (!DATABASE.containsServer(TEMP.get("appID")))
+                if (!DATABASE.hasServer(TEMP.get("appID")))
                     DATABASE.insertNewServer(TEMP.get("appID"),
                                              TEMP.get("baseURL"),
                                              TEMP.get("appName"));
@@ -454,7 +457,7 @@ public class U2F {
             try {
 
                 if (response.code() == 200)
-                    DATABASE.incrementCounter(TEMP.get("keyID"));
+                    DATABASE.setCounter(TEMP.get("keyID"), TEMP.get("serverCounter"));
 
                 Text.displayShort(CTX, response.body().string());
 

@@ -1,6 +1,8 @@
 package com.terainsights.a2q2r_android.dialog;
 
 import android.app.Activity;
+import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -8,12 +10,14 @@ import android.widget.TextView;
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.util.U2F;
 
+import java.nio.ByteBuffer;
+
 /**
  * Controller for a simple authentication confirmation dialog which displays
  * the server's name and 2Q2R domain.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/28/16
+ * @version 8/19/16
  */
 public class AuthDialog extends Activity implements View.OnClickListener {
 
@@ -34,6 +38,20 @@ public class AuthDialog extends Activity implements View.OnClickListener {
             ((TextView) findViewById(R.id.server_url)).setText(extras.getString("serverURL"));
 
             authData = extras.getString("authData");
+            int missed = extras.getInt("missed");
+
+            if (missed > 0) {
+
+                TextView tv = (TextView) findViewById(R.id.counter_warning);
+                tv.setText("You've missed " + missed + " authentication attempts " +
+                           "from this server!");
+
+                if (missed >= 5)
+                    tv.setTextColor(Color.RED);
+
+                tv.setVisibility(View.VISIBLE);
+
+            }
 
         }
 
