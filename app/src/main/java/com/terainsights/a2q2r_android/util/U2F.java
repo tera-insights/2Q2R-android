@@ -1,6 +1,7 @@
 package com.terainsights.a2q2r_android.util;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
@@ -9,6 +10,7 @@ import android.widget.Toast;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.jaredrummler.android.device.DeviceName;
 import com.terainsights.a2q2r_android.R;
+import com.terainsights.a2q2r_android.dialog.AuthDialog;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.json.JSONException;
@@ -44,7 +46,7 @@ import retrofit2.http.POST;
  * resources.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 7/28/16
+ * @version 8/31/16
  */
 public class U2F {
 
@@ -62,7 +64,7 @@ public class U2F {
      * Static cache for use by U2F state until it is safe to insert a new registration
      * into the database.
      */
-    private static HashMap<String, String> TEMP = new HashMap<>();
+    public static HashMap<String, String> TEMP = new HashMap<>();
 
     /**
      * GET call for server info.
@@ -76,7 +78,7 @@ public class U2F {
      * POST call for sending U2F registration data.
      */
     public interface Registration {
-        @POST("register")
+        @POST("v1/register")
         Call<ResponseBody> register(@Body RequestBody body);
     }
 
@@ -84,7 +86,7 @@ public class U2F {
      * POST call for sending U2F authentication data.
      */
     public interface Authentication {
-        @POST("auth")
+        @POST("v1/auth")
         Call<ResponseBody> authenticate(@Body RequestBody body);
     }
 
@@ -113,6 +115,7 @@ public class U2F {
             TEMP.put("challenge", challenge);
             TEMP.put("infoURL", infoURL);
             TEMP.put("userID", userID);
+            TEMP.put("qrContent", qrContent);
 
             U2F.ServerInfo info = retro.create(U2F.ServerInfo.class);
             Call<ResponseBody> infoCall = info.getInfo();
@@ -143,6 +146,50 @@ public class U2F {
     }
 
     /**
+     * Sends an error to the server's authentication route, indicating that
+     * the user rejected the authentication attempt.
+     * @param qrContent The full message read from an authentication QR.
+     */
+    public static void decline(String qrContent) {
+
+        try {
+
+            String[] splitQR = qrContent.split(" ");
+            JSONObject authData = new JSONObject()
+                    .put("challenge", splitQR[2])
+                    .put("errorMessage", "Authentication declined.")
+                    .put("errorStatus", 401);
+            String baseURL = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]).baseURL;
+
+            MediaType media = MediaType.parse("application/json; charset=utf-8");
+
+            RequestBody data = RequestBody.create(media, authData.toString());
+
+            Retrofit retro = new Retrofit.Builder()
+                    .baseUrl(baseURL)
+                    .build();
+
+            if (qrContent.charAt(0) == 'R') {
+                U2F.Registration reg = retro.create(U2F.Registration.class);
+                Call<ResponseBody> regCall = reg.register(data);
+                regCall.enqueue(new RegistrationCallback());
+            } else if (qrContent.charAt(0) == 'A') {
+                U2F.Authentication auth = retro.create(U2F.Authentication.class);
+                Call<ResponseBody> authCall = auth.authenticate(data);
+                authCall.enqueue(new AuthenticationCallback());
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        } catch (ArrayIndexOutOfBoundsException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
      * Provided with all the necessary data from a U2F registration request,
      * generates a registration response which conforms exactly to the
      * specifications outlined in the U2F standard, and sends it to the
@@ -156,7 +203,7 @@ public class U2F {
      *                     prevent multiple registrations of the same device to the
      *                     same account.
      */
-    private static void register(String challengeB64, String serverInfo, String userID) {
+    public static void register(String challengeB64, String serverInfo, String userID) {
 
         try {
 
@@ -377,20 +424,25 @@ public class U2F {
         @Override
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
-            String body = null;
-
             try {
-                body = response.body().string();
-            } catch (IOException e) {
+
+                String body = response.body().string();
+                JSONObject serverData = new JSONObject(body);
+
+                Intent intent = new Intent(CTX, AuthDialog.class);
+                intent.putExtra("serverName", serverData.getString("appName"));
+                intent.putExtra("serverURL", serverData.getString("baseURL"));
+                intent.putExtra("authData", TEMP.get("qrContent"));
+                intent.putExtra("missed", 0);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                TEMP.put("serverData", body);
+
+                CTX.startActivity(intent);
+
+            } catch (IOException | JSONException e) {
+
                 e.printStackTrace();
-            }
-
-            if (body != null) {
-
-                System.out.println(body);
-                String challenge = TEMP.get("challenge");
-                String userID = TEMP.get("userID");
-                register(challenge, body, userID);
 
             }
 
@@ -413,7 +465,7 @@ public class U2F {
         @Override
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
-            String body = "No response.";
+            String body = "Sorry, the server didn't reply with a status message.";
 
             try {
                 body = response.body().string();
@@ -457,16 +509,18 @@ public class U2F {
 
             try {
 
-                if (response.code() == 200)
+                if (response.code() == 200) {
                     DATABASE.setCounter(TEMP.get("keyID"), TEMP.get("serverCounter"));
-
-                Text.displayShort(CTX, response.body().string());
+                    Text.displayShort(CTX, response.body().string());
+                } else {
+                    System.out.println("Server says: \"" + response.body().string() + "\"");
+                }
 
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (NullPointerException e) {
                 e.printStackTrace();
-                Text.displayShort(CTX, "Sorry, the server didn't reply.");
+                Text.displayShort(CTX, "Sorry, the server didn't reply with a status message.");
             }
 
         }

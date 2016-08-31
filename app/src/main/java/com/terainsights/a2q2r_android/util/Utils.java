@@ -7,6 +7,7 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.security.keystore.UserNotAuthenticatedException;
 import android.util.Base64;
+import android.util.Patterns;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -37,7 +38,7 @@ import javax.security.auth.x500.X500Principal;
  * >here</a>.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 8/19/16
+ * @version 8/31/16
  */
 public class Utils {
 
@@ -60,7 +61,7 @@ public class Utils {
             if (Base64.decode(split[1], Base64.URL_SAFE).length != 32)
                 return 0;
 
-            if (!split[2].matches("[a-zA-Z0-9:/\\.]+"))
+            if (!Patterns.WEB_URL.matcher(split[2]).matches())
                 return 0;
 
             return 'R';

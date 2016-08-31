@@ -5,13 +5,14 @@
     android:orientation="vertical">
 
     <TextView
+        android:id="@+id/dialog_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_margin="24dp"
         android:maxLines="4"
         android:textSize="16sp"
-        android:text="@string/fcm_confirm"
+        android:text="@string/auth_confirm"
         />
 
     <TextView
@@ -57,6 +58,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginLeft="24dp"
         android:layout_marginRight="24dp"
+        android:layout_marginBottom="24dp"
         android:maxLines="4"
         android:textSize="16sp"
         android:text="@string/double_check_challenge"
@@ -67,9 +69,24 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:layout_margin="24dp"
+        android:layout_marginLeft="24dp"
+        android:layout_marginRight="24dp"
+        android:layout_marginBottom="-22dp"
         android:singleLine="true"
         android:textSize="28sp"
+        android:textStyle="bold"
+        android:fontFamily="courier-new"
+        android:text="OmZ1   _9SjQ"
+        />
+
+    <TextView
+        android:id="@+id/challenge_excerpt_extended"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="24dp"
+        android:singleLine="true"
+        android:textSize="14sp"
         android:textStyle="bold"
         android:fontFamily="courier-new"
         />

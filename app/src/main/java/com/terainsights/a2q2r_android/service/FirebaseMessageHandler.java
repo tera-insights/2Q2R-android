@@ -7,6 +7,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.dialog.AuthDialog;
 import com.terainsights.a2q2r_android.util.KeyDatabase;
+import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
 
 import java.io.File;
@@ -17,7 +18,7 @@ import java.io.File;
  * cloud notification from Firebase.
  *
  * @author Sam Claus, Tera Insights, LLC
- * @version 8/19/16
+ * @version 8/31/16
  */
 public class FirebaseMessageHandler extends FirebaseMessagingService {
 
@@ -49,9 +50,14 @@ public class FirebaseMessageHandler extends FirebaseMessagingService {
             int deviceCounter = U2F.DATABASE.getCounter(split[3]);
             int difference = serverCounter - deviceCounter;
 
-            if (difference < 1) {
+            if (difference < 0) {
 
-                System.out.println(getString(R.string.bad_counter_error));
+                Text.displayLong(getApplicationContext(), R.string.bad_counter_error);
+                return;
+
+            } else if (difference == 0) {
+
+                System.out.println("This Firebase message was already handled.");
                 return;
 
             }
