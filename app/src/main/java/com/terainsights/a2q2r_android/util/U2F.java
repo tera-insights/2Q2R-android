@@ -290,7 +290,7 @@ public class U2F {
                         .put("type", "2q2r")
                         .put("deviceName", DeviceName.getDeviceName())
                         .put("fcmToken", FirebaseInstanceId.getInstance().getToken())
-                        .put("clientData", clientData)
+                        .put("clientData", Base64.encodeToString(clientData.getBytes(), Base64.DEFAULT))
                         .put("registrationData", Base64.encodeToString(regRes, Base64.DEFAULT));
 
                 MediaType media = MediaType.parse("application/json; charset=utf-8");
@@ -389,7 +389,7 @@ public class U2F {
             }
 
             JSONObject authData = new JSONObject()
-                    .put("clientData", serializedClientData)
+                    .put("clientData", Base64.encodeToString(serializedClientData.getBytes(), Base64.DEFAULT))
                     .put("signatureData", Base64.encodeToString(signatureData, Base64.DEFAULT));
 
             MediaType media = MediaType.parse("application/json; charset=utf-8");

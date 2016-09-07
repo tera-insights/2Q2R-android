@@ -27,6 +27,9 @@ import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
 import com.terainsights.a2q2r_android.util.Utils;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 
 /**
@@ -37,7 +40,7 @@ import java.io.File;
  * @version 8/19/16
  */
 public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener,
-        AdapterView.OnItemClickListener, View.OnTouchListener {
+        AdapterView.OnItemClickListener {
 
     private static int SCAN_ACTION = 0;
     private static int CLEAR_ACTION = 1;
@@ -55,7 +58,6 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
         ListView registrations = (ListView) findViewById(R.id.registrations_view);
         registrations.setOnItemClickListener(this);
-        registrations.setOnTouchListener(this);
 
         KeyDatabase.KEY_ADAPTER = new KeyAdapter(this, R.layout.registration_item);
         U2F.DATABASE.refreshKeyInfo();
@@ -189,38 +191,6 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         intent.putExtra("baseURL", cursor.getString(cursor.getColumnIndex("baseURL")));
 
         startActivity(intent);
-
-    }
-
-    private float oldX = Float.NaN;
-    private final float delta = 50;
-
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-
-        switch (event.getAction()) {
-
-            case MotionEvent.ACTION_DOWN:
-                oldX = event.getX();
-                break;
-
-            case MotionEvent.ACTION_UP:
-                if (event.getX() - oldX < -delta) {
-                    onViewSwipedLeft(v);
-                    return true;
-                }
-
-        }
-
-        return false;
-
-    }
-
-    private void onViewSwipedLeft(View v) {
-
-        Animation slideLeft = AnimationUtils.loadAnimation(this, R.anim.slide_left);
-        v.startAnimation(slideLeft);
-        Text.displayShort(this, "You swiped left!");
 
     }
 
