@@ -156,9 +156,11 @@ public class U2F {
 
             String[] splitQR = qrContent.split(" ");
             JSONObject authData = new JSONObject()
-                    .put("challenge", splitQR[2])
-                    .put("errorMessage", "Authentication declined.")
-                    .put("errorStatus", 401);
+                    .put("successful", false)
+                    .put("data", new JSONObject()
+                        .put("challenge", splitQR[2])
+                        .put("errorMessage", "Authentication declined.")
+                        .put("errorStatus", 401));
             String baseURL = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]).baseURL;
 
             MediaType media = MediaType.parse("application/json; charset=utf-8");
@@ -287,11 +289,13 @@ public class U2F {
                 Log.i("MONITOR", "The keyID generated is: " + keyID);
 
                 JSONObject registrationData = new JSONObject()
-                        .put("type", "2q2r")
-                        .put("deviceName", DeviceName.getDeviceName())
-                        .put("fcmToken", FirebaseInstanceId.getInstance().getToken())
-                        .put("clientData", Base64.encodeToString(clientData.getBytes(), Base64.DEFAULT))
-                        .put("registrationData", Base64.encodeToString(regRes, Base64.DEFAULT));
+                        .put("successful", true)
+                        .put("data", new JSONObject()
+                            .put("type", "2q2r")
+                            .put("deviceName", DeviceName.getDeviceName())
+                            .put("fcmToken", FirebaseInstanceId.getInstance().getToken())
+                            .put("clientData", Base64.encodeToString(clientData.getBytes(), Base64.DEFAULT))
+                            .put("registrationData", Base64.encodeToString(regRes, Base64.DEFAULT)));
 
                 MediaType media = MediaType.parse("application/json; charset=utf-8");
 
@@ -389,8 +393,10 @@ public class U2F {
             }
 
             JSONObject authData = new JSONObject()
-                    .put("clientData", Base64.encodeToString(serializedClientData.getBytes(), Base64.DEFAULT))
-                    .put("signatureData", Base64.encodeToString(signatureData, Base64.DEFAULT));
+                    .put("successful", true)
+                    .put("data", new JSONObject()
+                        .put("clientData", Base64.encodeToString(serializedClientData.getBytes(), Base64.DEFAULT))
+                        .put("signatureData", Base64.encodeToString(signatureData, Base64.DEFAULT)));
 
             MediaType media = MediaType.parse("application/json; charset=utf-8");
 
