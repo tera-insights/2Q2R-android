@@ -23,7 +23,7 @@ public class KeyDatabase {
      */
     public static class ServerInfo {
         public String appName;
-        public String baseURL;
+        public String appURL;
     }
 
     /**
@@ -52,7 +52,7 @@ public class KeyDatabase {
                               "lastUsed TEXT NOT NULL)");
         this.database.execSQL("CREATE TABLE IF NOT EXISTS servers(" +
                               "appID   TEXT PRIMARY KEY NOT NULL," +
-                              "baseURL TEXT NOT NULL," +
+                              "appURL TEXT NOT NULL," +
                               "appName TEXT NOT NULL)");
 
     }
@@ -62,7 +62,7 @@ public class KeyDatabase {
      */
     public void refreshKeyInfo() {
 
-        Cursor c = database.rawQuery("SELECT keyID _id, userID, appName, baseURL, lastUsed, counter " +
+        Cursor c = database.rawQuery("SELECT keyID _id, userID, appName, appURL, lastUsed, counter " +
                                  "FROM keys, servers " +
                                  "WHERE keys.appID = servers.appID " +
                                  "ORDER BY lastUsed DESC", null);
@@ -121,14 +121,14 @@ public class KeyDatabase {
 
         ServerInfo result = new ServerInfo();
 
-        Cursor cursor = database.rawQuery("SELECT baseURL, appName " +
+        Cursor cursor = database.rawQuery("SELECT appURL, appName " +
                                           "FROM servers " +
                                           "WHERE appID = '" + appID + "'", null);
 
         if (!cursor.moveToFirst())
             return null;
 
-        result.baseURL = cursor.getString(cursor.getColumnIndex("baseURL"));
+        result.appURL = cursor.getString(cursor.getColumnIndex("appURL"));
         result.appName = cursor.getString(cursor.getColumnIndex("appName"));
 
         cursor.close();
@@ -166,14 +166,14 @@ public class KeyDatabase {
     /**
      * Appends information for a new server to the database.
      * @param appID   The U2F server ID.
-     * @param baseURL The 2Q2R server domain.
+     * @param appURL The 2Q2R server domain.
      * @param appName The human legible application name.
      */
-    public void insertNewServer(String appID, String baseURL, String appName) {
+    public void insertNewServer(String appID, String appURL, String appName) {
 
         database.execSQL("INSERT INTO servers VALUES ('" +
                 appID   + "','" +
-                baseURL + "','" +
+                appURL + "','" +
                 appName + "')");
 
     }

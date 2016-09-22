@@ -64,7 +64,7 @@ public class FirebaseMessageHandler extends FirebaseMessagingService {
 
             Intent intent = new Intent(getApplicationContext(), AuthDialog.class);
             intent.putExtra("serverName", serverInfo.appName);
-            intent.putExtra("serverURL", serverInfo.baseURL);
+            intent.putExtra("serverURL", serverInfo.appURL);
             intent.putExtra("authData", qrContent);
             intent.putExtra("missed", difference - 1);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

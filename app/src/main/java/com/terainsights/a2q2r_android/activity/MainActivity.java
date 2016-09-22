@@ -147,7 +147,7 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
                     Intent intent = new Intent(this, AuthDialog.class);
                     intent.putExtra("serverName", serverInfo.appName);
-                    intent.putExtra("serverURL", serverInfo.baseURL);
+                    intent.putExtra("serverURL", serverInfo.appURL);
                     intent.putExtra("authData", data.getStringExtra("qr_content"));
                     intent.putExtra("missed", difference - 1);
 
@@ -188,7 +188,7 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
 
         intent.putExtra("userID", cursor.getString(cursor.getColumnIndex("userID")));
         intent.putExtra("appName", cursor.getString(cursor.getColumnIndex("appName")));
-        intent.putExtra("baseURL", cursor.getString(cursor.getColumnIndex("baseURL")));
+        intent.putExtra("appURL", cursor.getString(cursor.getColumnIndex("appURL")));
 
         startActivity(intent);
 

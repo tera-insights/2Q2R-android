@@ -109,7 +109,7 @@ public class U2F {
                 infoURL += "/";
 
             Retrofit retro = new Retrofit.Builder()
-                    .baseUrl(infoURL)
+                    .appURL(infoURL)
                     .build();
 
             TEMP.put("challenge", challenge);
@@ -130,10 +130,10 @@ public class U2F {
 
             TEMP.put("serverCounter", splitQR[4]);
 
-            String baseURL = DATABASE.getServerInfo(base64AppID).baseURL;
+            String appURL = DATABASE.getServerInfo(base64AppID).appURL;
 
-            if (baseURL != null)
-                authenticate(challenge, keyID, base64AppID, baseURL);
+            if (appURL != null)
+                authenticate(challenge, keyID, base64AppID, appURL);
             else
                 Text.displayShort(CTX, R.string.registration_not_found_error);
 
@@ -161,14 +161,14 @@ public class U2F {
                         .put("challenge", splitQR[2])
                         .put("errorMessage", "Authentication declined.")
                         .put("errorStatus", 401));
-            String baseURL = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]).baseURL;
+            String appURL = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]).appURL;
 
             MediaType media = MediaType.parse("application/json; charset=utf-8");
 
             RequestBody data = RequestBody.create(media, authData.toString());
 
             Retrofit retro = new Retrofit.Builder()
-                    .baseUrl(baseURL)
+                    .appURL(appURL)
                     .build();
 
             if (qrContent.charAt(0) == 'R') {
@@ -195,7 +195,7 @@ public class U2F {
      * Provided with all the necessary data from a U2F registration request,
      * generates a registration response which conforms exactly to the
      * specifications outlined in the U2F standard, and sends it to the
-     * "/register" directory of the baseURL obtained from the relying
+     * "/register" directory of the appURL obtained from the relying
      * party's {@code infoURL}.
      *
      * @param challengeB64 A challenge provided by the server that the device is
@@ -241,13 +241,13 @@ public class U2F {
                 String clientData = new JSONObject()
                         .put("typ", "navigator.id.finishEnrollment")
                         .put("challenge", challengeB64)
-                        .put("origin", info.getString("baseURL"))
+                        .put("origin", info.getString("appURL"))
                         .toString().replace("\\", "");
 
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
 
                 byte[] futureUse = {0x00};
-                byte[] appParam = md.digest(info.getString("appID").getBytes());
+                byte[] appParam = md.digest(info.getString("appURL").getBytes());
                 byte[] challenge = md.digest(clientData.getBytes());
                 byte[] keyHandle = Base64.decode(keyID, Base64.URL_SAFE);
                 byte[] publicKey = bytes.toByteArray();
@@ -284,7 +284,7 @@ public class U2F {
                 TEMP.put("appID", info.getString("appID"));
                 TEMP.put("keyID", keyID);
                 TEMP.put("appName", info.getString("appName"));
-                TEMP.put("baseURL", info.getString("baseURL"));
+                TEMP.put("appURL", info.getString("appURL"));
 
                 Log.i("MONITOR", "The keyID generated is: " + keyID);
 
@@ -294,15 +294,15 @@ public class U2F {
                             .put("type", "2q2r")
                             .put("deviceName", DeviceName.getDeviceName())
                             .put("fcmToken", FirebaseInstanceId.getInstance().getToken())
-                            .put("clientData", Base64.encodeToString(clientData.getBytes(), Base64.DEFAULT))
-                            .put("registrationData", Base64.encodeToString(regRes, Base64.DEFAULT)));
+                            .put("clientData", Base64.encodeToString(clientData.getBytes(), Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP))
+                            .put("registrationData", Base64.encodeToString(regRes, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP)));
 
                 MediaType media = MediaType.parse("application/json; charset=utf-8");
 
                 RequestBody data = RequestBody.create(media, registrationData.toString());
 
                 Retrofit retro = new Retrofit.Builder()
-                        .baseUrl(info.getString("baseURL"))
+                        .appURL(info.getString("appURL"))
                         .build();
 
                 U2F.Registration reg = retro.create(U2F.Registration.class);
@@ -349,17 +349,17 @@ public class U2F {
      *                     from the server to identify the key it expects to
      *                     be used for authentication.
      * @param appID        A web-safe-Base64 encoded server ID.
-     * @param baseURL      The base URL for the U2F authentication route.
+     * @param appURL      The base URL for the U2F authentication route.
      */
     private static void authenticate(String challengeB64, String keyID, String appID,
-                                     String baseURL) {
+                                     String appURL) {
 
         try {
 
             JSONObject clientData = new JSONObject()
                     .put("typ", "navigator.id.getAssertion")
                     .put("challenge", challengeB64)
-                    .put("origin", baseURL);
+                    .put("origin", appURL);
 
             String serializedClientData = clientData.toString();
 
@@ -367,7 +367,7 @@ public class U2F {
 
             byte[] userPresence = {0b00000001};
             byte[] counter      = Utils.toByteArray(Integer.parseInt(TEMP.get("serverCounter")));
-            byte[] appParam     = md.digest(appID.getBytes());
+            byte[] appParam     = md.digest(appURL.getBytes());
             byte[] challenge    = md.digest(serializedClientData.getBytes());
 
             ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -395,15 +395,15 @@ public class U2F {
             JSONObject authData = new JSONObject()
                     .put("successful", true)
                     .put("data", new JSONObject()
-                        .put("clientData", Base64.encodeToString(serializedClientData.getBytes(), Base64.DEFAULT))
-                        .put("signatureData", Base64.encodeToString(signatureData, Base64.DEFAULT)));
+                        .put("clientData", Base64.encodeToString(serializedClientData.getBytes(), Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP))
+                        .put("signatureData", Base64.encodeToString(signatureData, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP)));
 
             MediaType media = MediaType.parse("application/json; charset=utf-8");
 
             RequestBody data = RequestBody.create(media, authData.toString());
 
             Retrofit retro = new Retrofit.Builder()
-                    .baseUrl(baseURL)
+                    .appURL(appURL)
                     .build();
 
             TEMP.put("keyID", keyID);
@@ -437,7 +437,7 @@ public class U2F {
 
                 Intent intent = new Intent(CTX, AuthDialog.class);
                 intent.putExtra("serverName", serverData.getString("appName"));
-                intent.putExtra("serverURL", serverData.getString("baseURL"));
+                intent.putExtra("serverURL", serverData.getString("appURL"));
                 intent.putExtra("authData", TEMP.get("qrContent"));
                 intent.putExtra("missed", 0);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -483,7 +483,7 @@ public class U2F {
 
                 if (!DATABASE.hasServer(TEMP.get("appID")))
                     DATABASE.insertNewServer(TEMP.get("appID"),
-                                             TEMP.get("baseURL"),
+                                             TEMP.get("appURL"),
                                              TEMP.get("appName"));
 
                 DATABASE.insertNewKey(TEMP.get("keyID"),

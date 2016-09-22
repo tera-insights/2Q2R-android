@@ -25,7 +25,7 @@ public class KeyDescription extends Activity {
 
         ((TextView) findViewById(R.id.user_id)).setText(data.getString("userID"));
         ((TextView) findViewById(R.id.app_name)).setText(data.getString("appName"));
-        ((TextView) findViewById(R.id.base_url)).setText(data.getString("baseURL"));
+        ((TextView) findViewById(R.id.base_url)).setText(data.getString("appURL"));
 
     }
 
