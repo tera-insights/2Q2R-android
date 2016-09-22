@@ -109,7 +109,7 @@ public class U2F {
                 infoURL += "/";
 
             Retrofit retro = new Retrofit.Builder()
-                    .appURL(infoURL)
+                    .baseUrl(infoURL)
                     .build();
 
             TEMP.put("challenge", challenge);
@@ -168,7 +168,7 @@ public class U2F {
             RequestBody data = RequestBody.create(media, authData.toString());
 
             Retrofit retro = new Retrofit.Builder()
-                    .appURL(appURL)
+                    .baseUrl(appURL)
                     .build();
 
             if (qrContent.charAt(0) == 'R') {
@@ -302,7 +302,7 @@ public class U2F {
                 RequestBody data = RequestBody.create(media, registrationData.toString());
 
                 Retrofit retro = new Retrofit.Builder()
-                        .appURL(info.getString("appURL"))
+                        .baseUrl(info.getString("appURL"))
                         .build();
 
                 U2F.Registration reg = retro.create(U2F.Registration.class);
@@ -403,7 +403,7 @@ public class U2F {
             RequestBody data = RequestBody.create(media, authData.toString());
 
             Retrofit retro = new Retrofit.Builder()
-                    .appURL(appURL)
+                    .baseUrl(appURL)
                     .build();
 
             TEMP.put("keyID", keyID);
