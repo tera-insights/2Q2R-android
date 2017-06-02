@@ -27,7 +27,7 @@ public class KeyDatabase {
     }
 
     /**
-     * Feeds key data into the main activity's ListView.
+     * Feeds key data into the options activity's ListView.
      */
     public static KeyAdapter KEY_ADAPTER;
 
@@ -148,7 +148,7 @@ public class KeyDatabase {
      */
     public void insertNewKey(String keyID, String appID, String userID) {
 
-        DateFormat df = new SimpleDateFormat("yyyy/MM/dd' 'HH:mm");
+        DateFormat df = new SimpleDateFormat("dd/MM/yyyy' 'HH:mm");
         df.setTimeZone(TimeZone.getDefault());
         String dtTm = df.format(new Date());
 

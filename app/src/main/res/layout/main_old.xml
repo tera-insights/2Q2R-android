@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    tools:context="com.terainsights.a2q2r_android.activity.MainActivity">
+
+    <ListView
+        android:id="@+id/registrations_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:longClickable="true"
+    />
+
+    <at.markushi.ui.CircleButton
+        android:id="@+id/action_scan"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_margin="16dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:src="@android:drawable/ic_menu_camera"
+        app:cb_color="#23AFDE"
+        app:cb_pressedRingWidth="8dp"
+    />
+
+</RelativeLayout>

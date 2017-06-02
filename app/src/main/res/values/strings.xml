@@ -6,6 +6,8 @@
     <string name="cancel">Cancel</string>
     <string name="scan_qr">Open Scanner</string>
 
+    <string name="last_used">Last used %1$s at %2$s</string>
+
     <string name="about_2q2r">About 2Q2R</string>
     <string name="about_version">2Q2R Version %1$s</string>
     <string name="about_copyright">© 2016 - Tera Insights, LLC</string>
@@ -46,4 +48,8 @@
     <string name="registration_request_error">There was an error while sending the registration to the server.</string>
     <string name="authentication_request_error">There was an error while sending the authentication to the server.</string>
     <string name="bad_counter_error">You just received an expired authentication attempt! This could mean a third party is trying to use your key to verify themselves!</string>
+
+    <string name="history">History</string>
+    <string name="accounts">Accounts</string>
+    <string name="scan">Scan</string>
 </resources>

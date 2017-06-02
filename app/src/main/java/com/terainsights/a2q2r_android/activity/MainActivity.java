@@ -4,15 +4,15 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.support.design.widget.BottomNavigationView;
 
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
@@ -26,9 +26,6 @@ import com.terainsights.a2q2r_android.util.KeyDatabase;
 import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
 import com.terainsights.a2q2r_android.util.Utils;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 
@@ -56,6 +53,34 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         U2F.DATABASE = new KeyDatabase(f);
         U2F.CTX      = getApplicationContext();
 
+        BottomNavigationView bottomNavigation = (BottomNavigationView) findViewById(R.id.bottom_navigation);
+
+        bottomNavigation.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                switch(item.getItemId()){
+                    case R.id.history_label:
+                        findViewById(R.id.content).setLayout
+                        findViewById(R.id.history).setVisibility(View.VISIBLE);
+                        findViewById(R.id.accounts).setVisibility(View.GONE);
+                        findViewById(R.id.scan).setVisibility(View.GONE);
+                        break;
+                    case R.id.accounts_label:
+                        findViewById(R.id.history).setVisibility(View.GONE);
+                        findViewById(R.id.accounts).setVisibility(View.VISIBLE);
+                        findViewById(R.id.scan).setVisibility(View.GONE);
+                        break;
+                    case R.id.scan_label:
+                        findViewById(R.id.history).setVisibility(View.GONE);
+                        findViewById(R.id.accounts).setVisibility(View.GONE);
+                        findViewById(R.id.scan).setVisibility(View.VISIBLE);
+                        startActivityForResult(new Intent(MainActivity.this, ScanActivity.class), SCAN_ACTION);
+                        break;
+                }
+                return true;
+            }
+        });
+
         ListView registrations = (ListView) findViewById(R.id.registrations_view);
         registrations.setOnItemClickListener(this);
 
@@ -72,18 +97,11 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
                 .build();
         Dexter.checkPermission(listener, Manifest.permission.CAMERA);
 
-        findViewById(R.id.action_scan).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivityForResult(new Intent(MainActivity.this, ScanActivity.class), SCAN_ACTION);
-            }
-        });
-
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
+        getMenuInflater().inflate(R.menu.options, menu);
         menu.findItem(R.id.action_about).setOnMenuItemClickListener(this);
         menu.findItem(R.id.action_clear_data).setOnMenuItemClickListener(this);
         return true;

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/2Q2R-Android.iml" filepath="$PROJECT_DIR$/2Q2R-Android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/2Q2R-android.iml" filepath="$PROJECT_DIR$/2Q2R-android.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/commons-io-2.5/commons-io-2.5.iml" filepath="$PROJECT_DIR$/commons-io-2.5/commons-io-2.5.iml" />
     </modules>

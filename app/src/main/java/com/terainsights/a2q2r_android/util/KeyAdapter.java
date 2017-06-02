@@ -2,7 +2,10 @@ package com.terainsights.a2q2r_android.util;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.drawable.Icon;
+import android.media.Image;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.ResourceCursorAdapter;
 import android.widget.TextView;
 
@@ -10,7 +13,7 @@ import com.terainsights.a2q2r_android.R;
 
 /**
  * Serves to translate key data from the internal U2F database into the
- * main activity's visual ListView.
+ * options activity's visual ListView.
  *
  * @author Sam Claus, Tera Insights, LLC
  * @version 8/19/16
@@ -38,12 +41,19 @@ public class KeyAdapter extends ResourceCursorAdapter {
         String time = dateTime.split(" ")[1];
         date = (date.startsWith("0")) ? date.substring(1) : date;
         time = (time.startsWith("0")) ? time.substring(1) : time;
+        String lastUsed = context.getResources().getString(R.string.last_used, date, time);
 
+        int icon;
+//        TODO: Implement server icon; Leaving as default for now
+//        if(server icon exists){
+//          icon = server icon
+//        else
+            icon = R.mipmap.key_icon;
+
+        ((ImageView) view.findViewById(R.id.server_icon)).setImageResource(icon);
         ((TextView) view.findViewById(R.id.user_id)).setText(userID);
         ((TextView) view.findViewById(R.id.app_name)).setText(appName);
-        ((TextView) view.findViewById(R.id.date_used)).setText(
-                date.substring(date.indexOf('/') + 1));
-        ((TextView) view.findViewById(R.id.time_used)).setText(time);
+        ((TextView) view.findViewById(R.id.last_used)).setText(lastUsed);
 
     }
 
