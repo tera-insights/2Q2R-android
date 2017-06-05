@@ -9,7 +9,7 @@
 
     <include
         layout="@layout/history"
-        android:visibility="gone"
+        android:visibility="visible"
         android:id="@+id/history"/>
 
     <include
@@ -17,16 +17,17 @@
         android:visibility="gone"
         android:id="@+id/accounts"/>
 
-    <include
-        layout="@layout/scan"
+    <!--<include-->
+        <!--layout="@layout/scan"-->
         android:visibility="gone"
         android:id="@+id/scan"/>
 
-    <fragment
-        android:id="@+id/content"
+
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:id="@+id/fragment_container"/>
 
     <android.support.design.widget.BottomNavigationView
         android:id="@+id/bottom_navigation"

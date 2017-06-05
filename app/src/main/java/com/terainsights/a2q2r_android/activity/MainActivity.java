@@ -2,6 +2,8 @@ package com.terainsights.a2q2r_android.activity;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -37,16 +39,28 @@ import java.io.File;
  * @version 8/19/16
  */
 public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener,
-        AdapterView.OnItemClickListener {
+        AdapterView.OnItemClickListener, ScanFragment.OnQRScanListener {
 
     private static int SCAN_ACTION = 0;
     private static int CLEAR_ACTION = 1;
+
+//    Putting these here for now, find some better way to transfer fragment states
+    ScanFragment scanFragment;
+    HistoryFragment historyFragment;
+    AccountFragment accountFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
+        if (savedInstanceState == null) {
+            historyFragment = new HistoryFragment();
+            getFragmentManager().beginTransaction().add(R.id.fragment_container, historyFragment).commit();
+
+        }
+
 
         File f = new File(getFilesDir(), "registrations.database");
 
@@ -58,23 +72,19 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         bottomNavigation.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                FragmentTransaction transaction = getFragmentManager().beginTransaction();
                 switch(item.getItemId()){
                     case R.id.history_label:
-                        findViewById(R.id.content).setLayout
-                        findViewById(R.id.history).setVisibility(View.VISIBLE);
-                        findViewById(R.id.accounts).setVisibility(View.GONE);
-                        findViewById(R.id.scan).setVisibility(View.GONE);
+                        historyFragment = new HistoryFragment();
+                        transaction.replace(R.id.fragment_container, historyFragment).commit();
                         break;
                     case R.id.accounts_label:
-                        findViewById(R.id.history).setVisibility(View.GONE);
-                        findViewById(R.id.accounts).setVisibility(View.VISIBLE);
-                        findViewById(R.id.scan).setVisibility(View.GONE);
+                        accountFragment = new AccountFragment();
+                        transaction.replace(R.id.fragment_container, accountFragment).commit();
                         break;
                     case R.id.scan_label:
-                        findViewById(R.id.history).setVisibility(View.GONE);
-                        findViewById(R.id.accounts).setVisibility(View.GONE);
-                        findViewById(R.id.scan).setVisibility(View.VISIBLE);
-                        startActivityForResult(new Intent(MainActivity.this, ScanActivity.class), SCAN_ACTION);
+                        scanFragment = new ScanFragment();
+                        transaction.replace(R.id.fragment_container, scanFragment).commit();
                         break;
                 }
                 return true;
@@ -129,64 +139,69 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
     }
 
     @Override
+    public void onQRScan(boolean success, Intent data){
+        String qrContent = data.getStringExtra("qr_content");
+
+        if (success == true && data != null) {
+
+            if (Utils.identifyQRType(qrContent) == 'A') {
+
+                KeyDatabase.ServerInfo serverInfo = U2F.DATABASE
+                        .getServerInfo(qrContent.split(" ")[1]);
+
+                if (serverInfo == null) {
+
+                    Text.displayShort(this, R.string.unknown_server_error);
+                    return;
+
+                }
+
+                String[] split = qrContent.split(" ");
+                int serverCounter = Integer.parseInt(split[4]);
+                int deviceCounter = U2F.DATABASE.getCounter(split[3]);
+                int difference = serverCounter - deviceCounter;
+
+                if (difference < 1) {
+
+                    Text.displayLong(this, R.string.bad_counter_error);
+                    return;
+
+            }
+
+            Intent intent = new Intent(this, AuthDialog.class);
+            intent.putExtra("serverName", serverInfo.appName);
+            intent.putExtra("serverURL", serverInfo.appURL);
+            intent.putExtra("authData", data.getStringExtra("qr_content"));
+            intent.putExtra("missed", difference - 1);
+
+            startActivity(intent);
+
+        } else {
+
+            U2F.process(qrContent);
+
+        }
+
+        } else if (success == false) {
+
+            try {
+
+                if (data.getBooleanExtra("canceled", false))
+                    Text.displayShort(this, R.string.camera_closed);
+
+            } catch (NullPointerException e) {}
+
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == SCAN_ACTION) {
 
-            if (resultCode == RESULT_OK && data != null) {
 
-                String qrContent = data.getStringExtra("qr_content");
-
-                if (Utils.identifyQRType(qrContent) == 'A') {
-
-                    KeyDatabase.ServerInfo serverInfo = U2F.DATABASE
-                            .getServerInfo(qrContent.split(" ")[1]);
-
-                    if (serverInfo == null) {
-
-                        Text.displayShort(this, R.string.unknown_server_error);
-                        return;
-
-                    }
-
-                    String[] split = qrContent.split(" ");
-                    int serverCounter = Integer.parseInt(split[4]);
-                    int deviceCounter = U2F.DATABASE.getCounter(split[3]);
-                    int difference = serverCounter - deviceCounter;
-
-                    if (difference < 1) {
-
-                        Text.displayLong(this, R.string.bad_counter_error);
-                        return;
-
-                    }
-
-                    Intent intent = new Intent(this, AuthDialog.class);
-                    intent.putExtra("serverName", serverInfo.appName);
-                    intent.putExtra("serverURL", serverInfo.appURL);
-                    intent.putExtra("authData", data.getStringExtra("qr_content"));
-                    intent.putExtra("missed", difference - 1);
-
-                    startActivity(intent);
-
-                } else {
-
-                    U2F.process(qrContent);
-
-                }
-
-            } else if (resultCode == RESULT_CANCELED) {
-
-                try {
-
-                    if (data.getBooleanExtra("canceled", false))
-                        Text.displayShort(this, R.string.camera_closed);
-
-                } catch (NullPointerException e) {}
-
-            }
 
         } else if (requestCode == CLEAR_ACTION && resultCode == RESULT_OK) {
 
