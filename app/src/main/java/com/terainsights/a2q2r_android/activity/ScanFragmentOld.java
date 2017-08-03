@@ -1,35 +1,21 @@
-///*
-// * FreeOTP
-// *
-// * Authors: Nathaniel McCallum <npmccallum@redhat.com>
-// *
-// * Copyright (C) 2013  Nathaniel McCallum, Red Hat
-// *
-// * Licensed under the Apache License, Version 2.0 (the "License");
-// * you may not use this file except in compliance with the License.
-// * You may obtain a copy of the License at
-// *
-// *     http://www.apache.org/licenses/LICENSE-2.0
-// *
-// * Unless required by applicable law or agreed to in writing, software
-// * distributed under the License is distributed on an "AS IS" BASIS,
-// * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// * See the License for the specific language governing permissions and
-// * limitations under the License.
-// */
-//
 //package com.terainsights.a2q2r_android.activity;
 //
+//import android.Manifest;
 //import android.app.Activity;
+//import android.app.Fragment;
 //import android.content.Intent;
 //import android.hardware.Camera;
-//import android.hardware.Camera.Parameters;
 //import android.os.Bundle;
-//import android.os.Handler;
-//import android.util.Log;
+//import android.support.annotation.Nullable;
+//import android.view.LayoutInflater;
 //import android.view.SurfaceHolder;
 //import android.view.SurfaceView;
+//import android.view.View;
+//import android.view.ViewGroup;
 //
+//import com.karumi.dexter.Dexter;
+//import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
+//import com.karumi.dexter.listener.single.PermissionListener;
 //import com.terainsights.a2q2r_android.R;
 //import com.terainsights.a2q2r_android.util.Scanner;
 //
@@ -37,23 +23,27 @@
 //import java.util.List;
 //
 ///**
-// * Controls a camera preview while asynchronously scanning for a QR code. If a code is
-// * detected, the decoded data is fed into static U2F state.
-// *
-// * @author Sam Claus, Tera Insights, LLC
-// * @version 7/28/16
+// * Created by justin on 6/3/17.
 // */
-//public class ScanActivity extends Activity implements SurfaceHolder.Callback {
+//
+//public class ScanFragmentOld extends Fragment implements SurfaceHolder.Callback{
+//
+//    OnQRScanListener mCallback;
+//
+//    public interface OnQRScanListener{
+//        public void onQRScan(boolean success, Intent data);
+//    }
+//
+//    private static int SCAN_ACTION = 0;
+//    private static int CLEAR_ACTION = 1;
 //
 //    private Camera camera;
 //    private Scanner scanner;
 //    private boolean scannerActive = false;
 //
 //    @Override
-//    public void onCreate(Bundle savedInstanceState) {
-//
+//    public void onCreate(@Nullable Bundle savedInstanceState) {
 //        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.scan);
 //
 //        scanner = new Scanner(15) {
 //
@@ -64,8 +54,33 @@
 //
 //        };
 //
+//        Dexter.initialize(getActivity());
+//        PermissionListener listener = DialogOnDeniedPermissionListener.Builder
+//                .withContext(getActivity())
+//                .withTitle("Camera Permission")
+//                .withMessage(R.string.camera_required)
+//                .withButtonText(android.R.string.ok)
+//                .build();
+//        Dexter.checkPermission(listener, Manifest.permission.CAMERA);
+//
 //    }
 //
+//    @Override
+//    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
+//        return inflater.inflate(R.layout.scan, container, false);
+//    }
+//
+//
+//    @Override
+//    public void onAttach(Activity activity){
+//        super.onAttach(activity);
+//        try {
+//            mCallback = (OnQRScanListener) activity;
+//        } catch (ClassCastException e) {
+//            throw new ClassCastException(activity.toString()
+//                    + " must implement OnHeadlineSelectedListener");
+//        }
+//    }
 //    /**
 //     * Registers this class as the callback for the image surface in the layout XML.
 //     */
@@ -73,7 +88,7 @@
 //    public void onStart() {
 //
 //        super.onStart();
-//        ((SurfaceView) findViewById(R.id.camera_preview)).getHolder().addCallback(this);
+//        ((SurfaceView) getActivity().findViewById(R.id.camera_view)).getHolder().addCallback(this);
 //
 //    }
 //
@@ -119,14 +134,14 @@
 //        }
 //
 //        // Set auto-focus mode
-//        Parameters params = camera.getParameters();
+//        Camera.Parameters params = camera.getParameters();
 //        List<String> modes = params.getSupportedFocusModes();
-//        if (modes.contains(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
-//            params.setFocusMode(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-//        else if (modes.contains(Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
-//            params.setFocusMode(Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-//        else if (modes.contains(Parameters.FOCUS_MODE_AUTO)) {
-//            params.setFocusMode(Parameters.FOCUS_MODE_AUTO);
+//        if (modes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
+//            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+//        else if (modes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
+//            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+//        else if (modes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+//            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
 //        }
 //        camera.setParameters(params);
 //    }
@@ -168,22 +183,21 @@
 //     */
 //    private void onQRScanned(String content) {
 //
+//        System.out.println("QRScanned");
+//
 //        if (content != null) {
 //
 //            Intent intent = new Intent();
 //            intent.putExtra("qr_content", content);
-//            setResult(RESULT_OK, intent);
-//            finish();
+//            mCallback.onQRScan(true, intent);
 //
 //        } else {
 //
 //            Intent intent = new Intent();
 //            intent.putExtra("canceled", true);
-//            setResult(RESULT_CANCELED, intent);
-//            finish();
+//            mCallback.onQRScan(false, intent);
 //
 //        }
 //
 //    }
-//
 //}

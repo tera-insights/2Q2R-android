@@ -1,29 +1,15 @@
 package com.terainsights.a2q2r_android.activity;
 
-import android.Manifest;
 import android.app.Activity;
-import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ListView;
 import android.support.design.widget.BottomNavigationView;
 
-import com.karumi.dexter.Dexter;
-import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
-import com.karumi.dexter.listener.single.PermissionListener;
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.dialog.AuthDialog;
-import com.terainsights.a2q2r_android.dialog.ConfirmDialog;
-import com.terainsights.a2q2r_android.dialog.KeyDescription;
-import com.terainsights.a2q2r_android.util.KeyAdapter;
 import com.terainsights.a2q2r_android.util.KeyDatabase;
 import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
@@ -38,11 +24,7 @@ import java.io.File;
  * @author Sam Claus, Tera Insights, LLC
  * @version 8/19/16
  */
-public class MainActivity extends Activity implements MenuItem.OnMenuItemClickListener,
-        AdapterView.OnItemClickListener, ScanFragment.OnQRScanListener {
-
-    private static int SCAN_ACTION = 0;
-    private static int CLEAR_ACTION = 1;
+public class MainActivity extends Activity implements ScanFragment.OnQRScanListener {
 
 //    Putting these here for now, find some better way to transfer fragment states
     ScanFragment scanFragment;
@@ -55,12 +37,14 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
+        historyFragment = new HistoryFragment();
+        accountFragment = new AccountFragment();
+        scanFragment = new ScanFragment();
+
         if (savedInstanceState == null) {
-            historyFragment = new HistoryFragment();
             getFragmentManager().beginTransaction().add(R.id.fragment_container, historyFragment).commit();
 
         }
-
 
         File f = new File(getFilesDir(), "registrations.database");
 
@@ -75,66 +59,18 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
                 FragmentTransaction transaction = getFragmentManager().beginTransaction();
                 switch(item.getItemId()){
                     case R.id.history_label:
-                        historyFragment = new HistoryFragment();
                         transaction.replace(R.id.fragment_container, historyFragment).commit();
                         break;
                     case R.id.accounts_label:
-                        accountFragment = new AccountFragment();
                         transaction.replace(R.id.fragment_container, accountFragment).commit();
                         break;
                     case R.id.scan_label:
-                        scanFragment = new ScanFragment();
                         transaction.replace(R.id.fragment_container, scanFragment).commit();
                         break;
                 }
                 return true;
             }
         });
-
-        ListView registrations = (ListView) findViewById(R.id.registrations_view);
-        registrations.setOnItemClickListener(this);
-
-        KeyDatabase.KEY_ADAPTER = new KeyAdapter(this, R.layout.registration_item);
-        U2F.DATABASE.refreshKeyInfo();
-        registrations.setAdapter(KeyDatabase.KEY_ADAPTER);
-
-        Dexter.initialize(getApplicationContext());
-        PermissionListener listener = DialogOnDeniedPermissionListener.Builder
-                .withContext(getApplicationContext())
-                .withTitle("Camera Permission")
-                .withMessage(R.string.camera_required)
-                .withButtonText(android.R.string.ok)
-                .build();
-        Dexter.checkPermission(listener, Manifest.permission.CAMERA);
-
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.options, menu);
-        menu.findItem(R.id.action_about).setOnMenuItemClickListener(this);
-        menu.findItem(R.id.action_clear_data).setOnMenuItemClickListener(this);
-        return true;
-    }
-
-    @Override
-    public boolean onMenuItemClick(MenuItem item) {
-
-        switch (item.getItemId()) {
-
-            case R.id.action_about:
-                startActivity(new Intent(this, AboutActivity.class));
-                break;
-
-            case R.id.action_clear_data:
-                Intent intent = new Intent(this, ConfirmDialog.class);
-                intent.putExtra("data", "Are you sure you want to wipe your keys?");
-                startActivityForResult(intent, CLEAR_ACTION);
-                break;
-
-        }
-
-        return true;
 
     }
 
@@ -198,32 +134,6 @@ public class MainActivity extends Activity implements MenuItem.OnMenuItemClickLi
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == SCAN_ACTION) {
-
-
-
-        } else if (requestCode == CLEAR_ACTION && resultCode == RESULT_OK) {
-
-            System.out.println("Keys have been cleared.");
-            U2F.DATABASE.clear();
-
-        }
-
-    }
-
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int pos, long id) {
-
-        Intent intent = new Intent(this, KeyDescription.class);
-        Cursor cursor = KeyDatabase.KEY_ADAPTER.getCursor();
-        cursor.moveToPosition(pos);
-
-        intent.putExtra("userID", cursor.getString(cursor.getColumnIndex("userID")));
-        intent.putExtra("appName", cursor.getString(cursor.getColumnIndex("appName")));
-        intent.putExtra("appURL", cursor.getString(cursor.getColumnIndex("appURL")));
-
-        startActivity(intent);
 
     }
 

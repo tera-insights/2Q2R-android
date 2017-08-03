@@ -36,39 +36,24 @@ public class AuthDialog extends Activity implements View.OnClickListener {
 
         if (extras != null) {
 
-            ((TextView) findViewById(R.id.server_name)).setText(extras.getString("serverName")
+            ((TextView) findViewById(R.id.dialog_server_name)).setText(extras.getString("serverName")
                 .replace('_', ' '));
-            ((TextView) findViewById(R.id.server_url)).setText(extras.getString("serverURL"));
+            ((TextView) findViewById(R.id.dialog_server_address)).setText(extras.getString("serverURL"));
 
             authData = extras.getString("authData");
             int missed = extras.getInt("missed");
 
             String challenge = authData.split(" ")[authData.charAt(0) == 'R' ? 1 : 2];
             ((TextView) findViewById(R.id.challenge_excerpt)).setText(challenge.substring(0, 4) +
-                    "   " + challenge.substring(4, 8));
-            ((TextView) findViewById(R.id.challenge_excerpt_extended)).setText(
-                    challenge.substring(8, 12) + "   " +
-                    challenge.substring(12, 16) + "   " +
-                    challenge.substring(16, 20) + "   " +
-                    challenge.substring(20, 24) + "   " +
-                    challenge.substring(24, 28) + "   "
-            );
+                    " " + challenge.substring(4, 8) + " "+
+                    challenge.substring(8, 12) + " " +
+                    challenge.substring(12, 16));
+            ((TextView) findViewById(R.id.challenge_extra)).setText(
+                    challenge.substring(16, 20) + " " +
+                    challenge.substring(20, 24) + " " +
+                    challenge.substring(24, 28) + " " +
+                    challenge.substring(29, 32));
 
-            if (missed > 0) {
-
-                TextView tv = (TextView) findViewById(R.id.counter_warning);
-                tv.setText("You've missed " + missed + " authentication attempts " +
-                           "from this server!");
-
-                if (missed >= 5)
-                    tv.setTextColor(Color.RED);
-
-                tv.setVisibility(View.VISIBLE);
-
-            }
-
-            if (authData.charAt(0) == 'R')
-                ((TextView) findViewById(R.id.dialog_text)).setText(getString(R.string.reg_confirm));
 
         }
 

@@ -516,7 +516,7 @@ public class U2F {
             try {
 
                 if (response.code() == 200) {
-                    DATABASE.setCounter(TEMP.get("keyID"), TEMP.get("serverCounter"));
+                    DATABASE.setCounter(TEMP.get("keyID"), TEMP.get("appID"), TEMP.get("serverCounter"));
                     Text.displayShort(CTX, response.body().string());
                 } else {
                     System.out.println("Server says: \"" + response.body().string() + "\"");

@@ -32,6 +32,11 @@ public class KeyDatabase {
     public static KeyAdapter KEY_ADAPTER;
 
     /**
+     * Feed history data into the activity's ListView.
+     */
+    public static HistoryAdapter HISTORY_ADAPTER;
+
+    /**
      * The core database being manipulated with key data.
      */
     private SQLiteDatabase database;
@@ -54,6 +59,12 @@ public class KeyDatabase {
                               "appID   TEXT PRIMARY KEY NOT NULL," +
                               "appURL TEXT NOT NULL," +
                               "appName TEXT NOT NULL)");
+        this.database.execSQL("CREATE TABLE IF NOT EXISTS history(" +
+                              "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                              "dateTime TEXT NOT NULL," +
+                              "keyID TEXT NOT NULL," +
+                              "appID TEXT NOT NULL, " +
+                              "action TEXT NOT NULL)");
 
     }
 
@@ -69,6 +80,18 @@ public class KeyDatabase {
 
         KEY_ADAPTER.changeCursor(c);
 
+    }
+
+    /**
+     * Updates HistoryAdapter with the latest history info.
+     */
+    public void refreshHistory(){
+        Cursor c = database.rawQuery("SELECT _id, dateTime, appName, userID, action FROM history, servers, keys " +
+//                TODO: Something funky going on with history.appID
+                "WHERE keys.appID = servers.appID " +
+                "ORDER BY dateTime DESC", null);
+        System.out.println(c.getCount());
+        HISTORY_ADAPTER.changeCursor(c);
     }
 
     /**
@@ -101,10 +124,26 @@ public class KeyDatabase {
      *
      * @param keyID The key to
      */
-    public void setCounter(String keyID, String counter) {
+    public void setCounter(String keyID, String appID, String counter) {
+
+        DateFormat df = new SimpleDateFormat("dd/MM/yyyy' 'HH:mm");
+        df.setTimeZone(TimeZone.getDefault());
+        String dtTm = df.format(new Date());
 
         database.execSQL("UPDATE keys SET counter = " + counter +
                 " WHERE keyID = '" + keyID + "'");
+        database.execSQL("UPDATE keys SET lastUsed = '" + dtTm +
+                "' WHERE keyID = '" + keyID + "'");
+
+        df = new SimpleDateFormat("dd/MM/yyyy' 'HH:mm:ss");
+        df.setTimeZone(TimeZone.getDefault());
+        dtTm = df.format(new Date());
+
+        database.execSQL("INSERT INTO history (dateTime, keyID, appID, action) VALUES('" +
+                dtTm + "','" +
+                keyID + "','" +
+                appID + "','" +
+                "Login" + "')");
 
         refreshKeyInfo();
 
@@ -159,6 +198,17 @@ public class KeyDatabase {
                          userID + "','" +
                          dtTm   + "')");
 
+        df = new SimpleDateFormat("dd/MM/yyyy' 'HH:mm:ss");
+        df.setTimeZone(TimeZone.getDefault());
+         dtTm = df.format(new Date());
+
+        System.out.println(appID);
+
+        database.execSQL("INSERT INTO history (dateTime, keyID, appID, action) VALUES ('" +
+                         dtTm + "','" +
+                         keyID + "','" +
+                         appID + "','" +
+                         "Registration" + "')");
         refreshKeyInfo();
 
     }

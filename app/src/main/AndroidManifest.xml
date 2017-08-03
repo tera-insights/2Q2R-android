@@ -49,7 +49,7 @@
         <activity
             android:name=".dialog.AuthDialog"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
+            android:theme="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar" />
         <activity
             android:name=".dialog.KeyDescription"
             android:screenOrientation="portrait"

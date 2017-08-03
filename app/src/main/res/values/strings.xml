@@ -2,11 +2,12 @@
 <resources>
     <string name="app_name">2Q2R</string>
     <string name="add">Add</string>
-    <string name="okay">Okay</string>
+    <string name="okay">Accept</string>
     <string name="cancel">Cancel</string>
     <string name="scan_qr">Open Scanner</string>
 
-    <string name="last_used">Last used %1$s at %2$s</string>
+    <string name="last_used">Last login %1$s at %2$s</string>
+    <string name="history_used">%1$s at %2$s</string>
 
     <string name="about_2q2r">About 2Q2R</string>
     <string name="about_version">2Q2R Version %1$s</string>
@@ -29,7 +30,7 @@
     <string name="camera_closed">Camera closed to save battery.</string>
     <string name="reg_confirm">Would you like to register with the following server?</string>
     <string name="auth_confirm">Would you like to authenticate with the following server?</string>
-    <string name="double_check_challenge">Please make sure the following characters match those in your browser:</string>
+    <string name="double_check_challenge">Make sure that the code above matches the code in the 2Q2R authenticator.</string>
 
     <string name="invalid_qr_error">The QR you have scanned is not a 2Q2R-compliant key.</string>
     <string name="unknown_server_error">Sorry, but you are not registered with this server.</string>
@@ -52,4 +53,5 @@
     <string name="history">History</string>
     <string name="accounts">Accounts</string>
     <string name="scan">Scan</string>
+    <string name="login_request">Request From:</string>
 </resources>
