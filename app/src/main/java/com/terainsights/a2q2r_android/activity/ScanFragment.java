@@ -8,6 +8,7 @@ import android.hardware.Camera;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -40,6 +41,8 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
 
     private Camera camera;
     private Scanner scanner;
+
+    String prevContent = "";
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -177,11 +180,14 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
      * @param content The text encoded in the QR.
      */
     private void onQRScanned(String content) {
-
-        System.out.println("QRScanned");
-        Intent intent = new Intent();
-        intent.putExtra("qr_content", content);
-        mCallback.onQRScan(true, intent);
+        Log.i("SCANNING", prevContent + " <> " + content);
+        if(!content.equals(prevContent)) {
+            prevContent = content;
+            System.out.println("QRScanned");
+            Intent intent = new Intent();
+            intent.putExtra("qr_content", content);
+            mCallback.onQRScan(true, intent);
+        }
 
         scanner = new Scanner() {
             @Override
@@ -189,6 +195,9 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
                 onQRScanned(result);
             }
         };
+        camera.setPreviewCallback(scanner);
+        if(scanner.getStatus() != AsyncTask.Status.RUNNING)
+            scanner.execute();
 
     }
 }
