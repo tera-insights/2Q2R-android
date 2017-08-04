@@ -11,6 +11,7 @@ import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
 
+
 /**
  * Controller for a simple authentication confirmation dialog which displays
  * the server's name and 2Q2R domain.

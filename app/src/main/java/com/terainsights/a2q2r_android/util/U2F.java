@@ -407,6 +407,7 @@ public class U2F {
                     .build();
 
             TEMP.put("keyID", keyID);
+            TEMP.put("appID", appID);
 
             U2F.Authentication auth = retro.create(U2F.Authentication.class);
             Call<ResponseBody> authCall = auth.authenticate(data);

@@ -34,23 +34,17 @@ public class Scanner extends AsyncTask<Void, Void, String> implements Camera.Pre
     private final BlockingQueue<Data> mBlockingQueue;
     private final Reader mReader;
 
-    private final long start;
-    private final long timeout;
 
-    public Scanner(int secondsUntilTimeout) {
+    public Scanner() {
 
         mBlockingQueue = new LinkedBlockingQueue<>(5);
         mReader = new QRCodeReader();
-
-        start = System.currentTimeMillis();
-        timeout = (long) secondsUntilTimeout * 1000;
-
     }
 
     @Override
     protected String doInBackground(Void... args) {
 
-        while (System.currentTimeMillis() - start < timeout) {
+        while (true) {
 
             try {
                 Thread.currentThread().setName("Async Scan Task");
@@ -71,8 +65,6 @@ public class Scanner extends AsyncTask<Void, Void, String> implements Camera.Pre
             }
 
         }
-
-        return null;
 
     }
 

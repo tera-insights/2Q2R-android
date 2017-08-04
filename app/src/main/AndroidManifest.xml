@@ -43,10 +43,6 @@
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
         <activity
-            android:name=".dialog.ConfirmDialog"
-            android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
-        <activity
             android:name=".dialog.AuthDialog"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar" />

@@ -1,7 +1,9 @@
 package com.terainsights.a2q2r_android.util;
 
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -86,11 +88,14 @@ public class KeyDatabase {
      * Updates HistoryAdapter with the latest history info.
      */
     public void refreshHistory(){
-        Cursor c = database.rawQuery("SELECT _id, dateTime, appName, userID, action FROM history, servers, keys " +
-//                TODO: Something funky going on with history.appID
-                "WHERE keys.appID = servers.appID " +
+
+        Cursor c = database.rawQuery("SELECT _id, history.dateTime, servers.appName, keys.userID, history.action FROM history " +
+                "INNER JOIN servers ON history.appID = servers.appID " +
+                "INNER JOIN keys ON history.keyID = keys.keyID " +
                 "ORDER BY dateTime DESC", null);
-        System.out.println(c.getCount());
+
+        Log.i("DATABASE", "Refreshing history");
+
         HISTORY_ADAPTER.changeCursor(c);
     }
 
@@ -126,6 +131,8 @@ public class KeyDatabase {
      */
     public void setCounter(String keyID, String appID, String counter) {
 
+        Log.i("DATABASE", "SET COUNTER CALLED WITH APPID " + appID);
+
         DateFormat df = new SimpleDateFormat("dd/MM/yyyy' 'HH:mm");
         df.setTimeZone(TimeZone.getDefault());
         String dtTm = df.format(new Date());
@@ -140,13 +147,15 @@ public class KeyDatabase {
         dtTm = df.format(new Date());
 
         database.execSQL("INSERT INTO history (dateTime, keyID, appID, action) VALUES('" +
-                dtTm + "','" +
-                keyID + "','" +
-                appID + "','" +
+                dtTm + "', '" +
+                keyID + "', '" +
+                appID + "', '" +
                 "Login" + "')");
 
-        refreshKeyInfo();
+        Log.i("DATABASE", DatabaseUtils.dumpCursorToString(database.rawQuery("SELECT * FROM history", null)));
 
+        refreshKeyInfo();
+        refreshHistory();
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.terainsights.a2q2r_android.service;
 
 import android.content.Intent;
+import android.util.Log;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -38,6 +39,9 @@ public class FirebaseMessageHandler extends FirebaseMessagingService {
 
             String qrContent = msg.getData().get("authData");
             KeyDatabase.ServerInfo serverInfo = U2F.DATABASE.getServerInfo(qrContent.split(" ")[1]);
+
+
+            Log.i("FIREBASE", qrContent);
 
             String[] split = qrContent.split(" ");
 

@@ -3,11 +3,11 @@ package com.terainsights.a2q2r_android.activity;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
-import android.hardware.Camera;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -18,16 +18,15 @@ import com.karumi.dexter.Dexter;
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener;
 import com.karumi.dexter.listener.single.PermissionListener;
 import com.terainsights.a2q2r_android.R;
-import com.terainsights.a2q2r_android.util.Scanner;
 
-import java.io.IOException;
-import java.util.List;
+import github.nisrulz.qreader.QRDataListener;
+import github.nisrulz.qreader.QREader;
 
 /**
  * Created by justin on 6/3/17.
  */
 
-public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
+public class ScanFragment1 extends Fragment implements SurfaceHolder.Callback{
 
     OnQRScanListener mCallback;
 
@@ -35,22 +34,10 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
         public void onQRScan(boolean success, Intent data);
     }
 
-    private static int SCAN_ACTION = 0;
-    private static int CLEAR_ACTION = 1;
-
-    private Camera camera;
-    private Scanner scanner;
-
+    QREader qrReader;
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        scanner = new Scanner() {
-            @Override
-            public void onPostExecute(String result) {
-                onQRScanned(result);
-            }
-        };
 
         Dexter.initialize(getActivity());
         PermissionListener listener = DialogOnDeniedPermissionListener.Builder
@@ -68,9 +55,8 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
         return inflater.inflate(R.layout.scan, container, false);
     }
 
-
     @Override
-    public void onAttach(Activity activity){
+    public void onAttach(Context activity){
         super.onAttach(activity);
         try {
             mCallback = (OnQRScanListener) activity;
@@ -79,6 +65,7 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
                     + " must implement OnHeadlineSelectedListener");
         }
     }
+
     /**
      * Registers this class as the callback for the image surface in the layout XML.
      */
@@ -86,6 +73,7 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
     public void onStart() {
 
         super.onStart();
+
         ((SurfaceView) getActivity().findViewById(R.id.camera_view)).getHolder().addCallback(this);
 
     }
@@ -97,24 +85,26 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
     public void surfaceCreated(SurfaceHolder holder) {
 
         try {
+            SurfaceView cameraView = (SurfaceView) getView().findViewById(R.id.camera_view);
 
             // Open the camera.
-            camera = Camera.open();
-            camera.setPreviewDisplay(holder);
-            camera.setPreviewCallback(scanner);
-            if(scanner.getStatus() != AsyncTask.Status.RUNNING)
-                scanner.execute();
+            qrReader = new QREader.Builder(getView().getContext(), cameraView, new QRDataListener() {
+                @Override
+                public void onDetected(final String data) {
+                    onQRScanned(data);
+                }
+            }).facing(QREader.BACK_CAM)
+                    .enableAutofocus(true)
+                    .height(cameraView.getHeight())
+                    .width(cameraView.getWidth())
+                    .build();
 
+            qrReader.initAndStart(cameraView);
+            qrReader.start();
+            Log.i("MONITOR", qrReader.isCameraRunning() + " ");
         } catch (NullPointerException e) {
 
             // Didn't find a camera to open.
-            e.printStackTrace();
-            surfaceDestroyed(holder);
-            return;
-
-        } catch (IOException e) {
-
-            // Camera preview setup failed.
             e.printStackTrace();
             surfaceDestroyed(holder);
             return;
@@ -127,18 +117,6 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
             return;
 
         }
-
-        // Set auto-focus mode
-        Camera.Parameters params = camera.getParameters();
-        List<String> modes = params.getSupportedFocusModes();
-        if (modes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-        else if (modes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-        else if (modes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-        }
-        camera.setParameters(params);
     }
 
     /**
@@ -146,12 +124,12 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
      */
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-        if (camera == null)
-            return;
-
-        camera.setDisplayOrientation(90);
-        camera.startPreview();
+//
+//        if (camera == null)
+//            return;
+//
+//        camera.setDisplayOrientation(90);
+//        camera.startPreview();
 
     }
 
@@ -160,15 +138,7 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
      */
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-
-        if (camera == null)
-            return;
-
-        camera.stopPreview();
-        camera.setPreviewCallback(null);
-        camera.release();
-        camera = null;
-        scanner.cancel(true);
+        qrReader.releaseAndCleanup();
 
     }
 
@@ -179,16 +149,20 @@ public class ScanFragment extends Fragment implements SurfaceHolder.Callback{
     private void onQRScanned(String content) {
 
         System.out.println("QRScanned");
-        Intent intent = new Intent();
-        intent.putExtra("qr_content", content);
-        mCallback.onQRScan(true, intent);
 
-        scanner = new Scanner() {
-            @Override
-            public void onPostExecute(String result) {
-                onQRScanned(result);
-            }
-        };
+        if (content != null) {
+
+            Intent intent = new Intent();
+            intent.putExtra("qr_content", content);
+            mCallback.onQRScan(true, intent);
+
+        } else {
+
+            Intent intent = new Intent();
+            intent.putExtra("canceled", true);
+            mCallback.onQRScan(false, intent);
+
+        }
 
     }
 }

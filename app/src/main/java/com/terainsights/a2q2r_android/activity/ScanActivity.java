@@ -73,7 +73,7 @@
 //    public void onStart() {
 //
 //        super.onStart();
-//        ((SurfaceView) findViewById(R.id.camera_preview)).getHolder().addCallback(this);
+//        ((SurfaceView) findViewById(R.id.camera_view)).getHolder().addCallback(this);
 //
 //    }
 //

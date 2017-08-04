@@ -7,9 +7,11 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.view.MenuItem;
 import android.support.design.widget.BottomNavigationView;
+import android.view.ViewGroup;
 
 import com.terainsights.a2q2r_android.R;
 import com.terainsights.a2q2r_android.dialog.AuthDialog;
+import com.terainsights.a2q2r_android.util.KeyAdapter;
 import com.terainsights.a2q2r_android.util.KeyDatabase;
 import com.terainsights.a2q2r_android.util.Text;
 import com.terainsights.a2q2r_android.util.U2F;
@@ -42,8 +44,9 @@ public class MainActivity extends Activity implements ScanFragment.OnQRScanListe
         scanFragment = new ScanFragment();
 
         if (savedInstanceState == null) {
-            getFragmentManager().beginTransaction().add(R.id.fragment_container, historyFragment).commit();
-
+//            loads both account and history fragments so that all databases are fully loaded
+            getFragmentManager().beginTransaction().add(R.id.fragment_container, accountFragment).commit();
+            getFragmentManager().beginTransaction().replace(R.id.fragment_container, historyFragment).commit();
         }
 
         File f = new File(getFilesDir(), "registrations.database");
